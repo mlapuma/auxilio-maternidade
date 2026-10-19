@@ -1,0 +1,6 @@
+.questionario {font-family:Arial,sans-serif; min-height:100vh; background:#f1f8fa; padding:40px 20px; color:#193047;}
+.voltar-home {display:block; max-width:720px; margin:0 auto 20px; color:#0e7182;}
+.painel {max-width:720px; margin:auto; background:white; border-radius:18px; padding:clamp(24px,5vw,48px); box-shadow:0 12px 40px #19304714;}
+.etiqueta {color:#0e7182;font-weight:700;} progress {width:100%; accent-color:#0e7182;} h1 {line-height:1.2;} fieldset {border:0; padding:0; margin:28px 0;} legend {font-weight:600;margin-bottom:14px;}
+.opcao {display:block;border:1px solid #ccdce3;border-radius:10px;padding:15px;margin:10px 0;cursor:pointer;} .opcao:has(input:checked){border-color:#0e7182;background:#eaf8f7;}
+.acoes {display:flex;justify-content:space-between;gap:12px;} button,.link-acao {padding:12px 22px;border-radius:9px;border:1px solid #0e7182;background:white;color:#0e7182;cursor:pointer;} button.principal,.link-acao {background:#0e7182;color:white;} button:disabled{opacity:.45;cursor:not-allowed;} .link-acao{display:inline-block;text-decoration:none;margin:12px;} .aviso{font-size:.85rem;color:#526576;margin-top:28px;line-height:1.5;}
