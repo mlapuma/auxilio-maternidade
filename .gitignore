@@ -9,3 +9,26 @@ dist/
 !.env.example
 *.log
 .DS_Store
+# Angular
+**/node_modules/
+**/.angular/
+**/dist/
+**/coverage/
+
+# Java / Maven
+**/target/
+**/.classpath
+**/.project
+**/.settings/
+
+# IDE
+.idea/
+.vscode/
+
+# Variáveis locais e segredos
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
