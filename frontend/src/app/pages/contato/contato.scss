@@ -1,0 +1,13 @@
+.contato { min-height: 100vh; padding: 3rem 1rem; background: #f0f8fa; color: #16314a; }
+.contato > a { display: block; max-width: 720px; margin: 0 auto 1.5rem; color: #087488; }
+.cartao { max-width: 720px; margin: auto; padding: 2.5rem; background: white; border-radius: 20px; }
+h1 { font-size: clamp(1.8rem, 4vw, 2.7rem); }
+form { display: grid; gap: .75rem; }
+input:not([type=checkbox]) { box-sizing: border-box; width: 100%; padding: .85rem; border: 1px solid #a9c8d0; border-radius: 8px; font: inherit; }
+.aceite { display: flex; gap: .7rem; align-items: flex-start; margin-top: 1rem; }
+.aceite input { margin-top: .3rem; }
+.aviso { font-size: .9rem; }
+.erro { color: #a52222; }
+button { padding: 1rem; border: 0; border-radius: 8px; background: #087488; color: white; font: inherit; font-weight: bold; cursor: pointer; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+@media(max-width: 600px) { .cartao { padding: 1.5rem; } }
