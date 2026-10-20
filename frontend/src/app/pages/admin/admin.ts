@@ -14,6 +14,14 @@ interface LeadResumo {
   status: string;
   criadoEm: string;
 }
+interface TriagemDetalhe {
+  id: string;
+  classificacao: string;
+  houveNascimentoOuAdocao: boolean;
+  possuiVinculoOuContribuicao: boolean;
+  desejaAtendimento: boolean;
+  criadoEm: string;
+}
 interface PaginaLeads {
   content: LeadResumo[];
   totalElements: number;
@@ -33,6 +41,9 @@ export class Admin {
   readonly autenticado = signal(false);
   readonly carregando = signal(false);
   readonly salvandoId = signal<string | null>(null);
+  readonly leadDetalhado = signal<LeadResumo | null>(null);
+  readonly triagens = signal<TriagemDetalhe[]>([]);
+  readonly carregandoTriagens = signal(false);
   readonly erro = signal('');
   readonly pagina = signal<PaginaLeads | null>(null);
   readonly filtro = signal('TODOS');
@@ -106,12 +117,40 @@ export class Admin {
     });
   }
 
+  consultarTriagens(lead: LeadResumo): void {
+    if (!this.autorizacao || this.carregandoTriagens()) return;
+    this.leadDetalhado.set(lead);
+    this.triagens.set([]);
+    this.erro.set('');
+    this.carregandoTriagens.set(true);
+    this.http.get<TriagemDetalhe[]>(
+      '/api/admin/leads/' + encodeURIComponent(lead.id) + '/triagens',
+      { headers: new HttpHeaders({ Authorization: this.autorizacao }) },
+    ).pipe(finalize(() => this.carregandoTriagens.set(false))).subscribe({
+      next: dados => this.triagens.set(dados),
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 401 || err.status === 403) {
+          this.sair();
+          this.erro.set('Acesso não autorizado. Entre novamente.');
+        } else {
+          this.erro.set('Não foi possível consultar o questionário.');
+        }
+      },
+    });
+  }
+
+  fecharDetalhes(): void {
+    this.leadDetalhado.set(null);
+    this.triagens.set([]);
+  }
+
   sair(): void {
     this.autorizacao = '';
     this.usuario = '';
     this.senha = '';
     this.autenticado.set(false);
     this.pagina.set(null);
+    this.fecharDetalhes();
     this.filtro.set('TODOS');
   }
 
