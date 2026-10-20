@@ -45,6 +45,9 @@ public class Lead {
     }
     public UUID getId() { return id; }
     public String getProtocolo() { return protocolo; }
+    public String getNome() { return nome; }
+    public String getTelefone() { return telefone; }
+    public String getEmail() { return email; }
     public String getStatus() { return status; }
     public OffsetDateTime getCriadoEm() { return criadoEm; }
 }
