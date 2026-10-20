@@ -28,12 +28,14 @@ public class AdminLeadController {
     }
 
     @GetMapping
-    public Page<LeadResumo> listar(@PageableDefault(size = 20, sort = "criadoEm", direction = Sort.Direction.DESC) Pageable pageable) {
+    public Page<LeadResumo> listar(@PageableDefault(size = 20, sort = "criadoEm", direction = Sort.Direction.DESC) Pageable pageable,
+                                  @RequestParam(required = false) StatusAtendimento status) {
         if (pageable.getPageSize() > 100) {
             throw new org.springframework.web.server.ResponseStatusException(
                 org.springframework.http.HttpStatus.BAD_REQUEST, "Tamanho máximo da página: 100");
         }
-        return repository.findAll(pageable).map(LeadResumo::from);
+        return (status == null ? repository.findAll(pageable) : repository.findByStatus(status.name(), pageable))
+            .map(LeadResumo::from);
     }
 
     public enum StatusAtendimento { NOVO, EM_ATENDIMENTO, CONCLUIDO }
