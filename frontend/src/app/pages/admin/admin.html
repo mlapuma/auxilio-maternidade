@@ -1,1 +1,28 @@
-<p>admin works!</p>
+<main class="admin">
+  <header class="cabecalho">
+    <div>
+      <span class="etiqueta">Área restrita · Escritório</span>
+      <h1>Painel de atendimentos</h1>
+      <p>Organização dos interessados no salário-maternidade.</p>
+    </div>
+    <a routerLink="/">Voltar ao site</a>
+  </header>
+
+  @if (!autenticado()) {
+    <section class="bloqueio" role="status">
+      <h2>Acesso restrito</h2>
+      <p>O painel está em desenvolvimento. A consulta de clientes será habilitada somente após implementar autenticação e controle de acesso no servidor.</p>
+      <p>Nenhum dado pessoal é carregado nesta tela.</p>
+    </section>
+  } @else {
+    <section class="conteudo">
+      <h2>Atendimentos</h2>
+      <div class="filtros" aria-label="Filtrar atendimentos">
+        @for (f of filtros; track f.valor) {
+          <button type="button" [class.ativo]="filtro() === f.valor" (click)="filtro.set(f.valor)">{{ f.rotulo }}</button>
+        }
+      </div>
+      <p>Não há dados disponíveis.</p>
+    </section>
+  }
+</main>
