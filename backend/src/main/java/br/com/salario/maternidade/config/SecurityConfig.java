@@ -37,6 +37,6 @@ public class SecurityConfig {
             return new InMemoryUserDetailsManager();
         }
         return new InMemoryUserDetailsManager(
-            User.withUsername(username).password(passwordHash).roles("ADMIN").build());
+            User.withUsername(username).password("{bcrypt}" + passwordHash).roles("ADMIN").build());
     }
 }
