@@ -4,6 +4,7 @@ import br.com.salario.maternidade.lead.Lead;
 import br.com.salario.maternidade.lead.LeadRepository;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
@@ -19,9 +20,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/leads")
 public class AdminLeadController {
     private final LeadRepository repository;
+    private final HistoricoStatusRepository historico;
 
-    public AdminLeadController(LeadRepository repository) {
+    public AdminLeadController(LeadRepository repository, HistoricoStatusRepository historico) {
         this.repository = repository;
+        this.historico = historico;
     }
 
     @GetMapping
@@ -42,9 +45,28 @@ public class AdminLeadController {
     public LeadResumo atualizarStatus(@PathVariable UUID id, @Valid @RequestBody AtualizarStatusRequest request) {
         Lead lead = repository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Atendimento não encontrado"));
-        lead.atualizarStatus(request.status().name());
+        String anterior = lead.getStatus();
+        String novo = request.status().name();
+        if (!anterior.equals(novo)) {
+            lead.atualizarStatus(novo);
+            historico.save(new HistoricoStatus(id, anterior, novo));
+        }
         return LeadResumo.from(repository.save(lead));
     }
+
+    @GetMapping("/{id}/historico")
+    public List<HistoricoResumo> listarHistorico(@PathVariable UUID id) {
+        if (!repository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Atendimento não encontrado");
+        }
+        return historico.findByLeadIdOrderByAlteradoEmDesc(id).stream()
+            .map(item -> new HistoricoResumo(item.getId(), item.getStatusAnterior(),
+                item.getStatusNovo(), item.getAlteradoEm()))
+            .toList();
+    }
+
+    public record HistoricoResumo(UUID id, String statusAnterior, String statusNovo,
+                                  OffsetDateTime alteradoEm) {}
 
     public record LeadResumo(UUID id, String protocolo, String nome, String telefone,
                              String email, String status, OffsetDateTime criadoEm) {
