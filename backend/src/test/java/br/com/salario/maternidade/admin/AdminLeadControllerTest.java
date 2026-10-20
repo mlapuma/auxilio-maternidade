@@ -24,7 +24,7 @@ class AdminLeadControllerTest {
     @Test
     void bloqueiaAlteracaoAnonima() throws Exception {
         mvc.perform(patch("/api/admin/leads/00000000-0000-0000-0000-000000000001/status")
-                .contentType(MediaType.APPLICATION_JSON).content("{\\"status\\":\\"CONCLUIDO\\"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"CONCLUIDO\"}"))
             .andExpect(status().isUnauthorized());
         verifyNoInteractions(repository);
     }
@@ -33,7 +33,7 @@ class AdminLeadControllerTest {
     @WithMockUser(roles = "ADMIN")
     void rejeitaStatusInvalido() throws Exception {
         mvc.perform(patch("/api/admin/leads/00000000-0000-0000-0000-000000000001/status")
-                .contentType(MediaType.APPLICATION_JSON).content("{\\"status\\":\\"INDEFINIDO\\"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"INDEFINIDO\"}"))
             .andExpect(status().isBadRequest());
         verifyNoInteractions(repository);
     }
@@ -42,7 +42,7 @@ class AdminLeadControllerTest {
     @WithMockUser(roles = "ADMIN")
     void rejeitaAtendimentoInexistente() throws Exception {
         mvc.perform(patch("/api/admin/leads/00000000-0000-0000-0000-000000000001/status")
-                .contentType(MediaType.APPLICATION_JSON).content("{\\"status\\":\\"CONCLUIDO\\"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"CONCLUIDO\"}"))
             .andExpect(status().isNotFound());
     }
 
