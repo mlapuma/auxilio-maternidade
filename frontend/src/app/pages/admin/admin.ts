@@ -83,7 +83,10 @@ export class Admin {
     this.erro.set('');
     this.http.get<PaginaLeads>('/api/admin/leads', {
       headers: new HttpHeaders({ Authorization: this.autorizacao }),
-      params: { page: numero, size: 20, sort: 'criadoEm,desc' },
+      params: {
+        page: numero, size: 20, sort: 'criadoEm,desc',
+        ...(this.filtro() !== 'TODOS' ? { status: this.filtro() } : {}),
+      },
     }).pipe(finalize(() => this.carregando.set(false))).subscribe({
       next: resultado => {
         this.pagina.set(resultado);
@@ -197,10 +200,15 @@ export class Admin {
     this.filtro.set('TODOS');
   }
 
-  alterarFiltro(valor: string): void { this.filtro.set(valor); }
+  alterarFiltro(valor: string): void {
+    if (this.filtro() === valor || this.carregando()) return;
+    this.filtro.set(valor);
+    this.fecharDetalhes();
+    this.carregar(0);
+  }
 
   get registrosFiltrados(): LeadResumo[] {
     const dados = this.pagina()?.content ?? [];
-    return this.filtro() === 'TODOS' ? dados : dados.filter(lead => lead.status === this.filtro());
+    return dados;
   }
 }
