@@ -22,6 +22,12 @@ interface TriagemDetalhe {
   desejaAtendimento: boolean;
   criadoEm: string;
 }
+interface HistoricoResumo {
+  id: string;
+  statusAnterior: string;
+  statusNovo: string;
+  alteradoEm: string;
+}
 interface PaginaLeads {
   content: LeadResumo[];
   totalElements: number;
@@ -43,6 +49,8 @@ export class Admin {
   readonly salvandoId = signal<string | null>(null);
   readonly leadDetalhado = signal<LeadResumo | null>(null);
   readonly triagens = signal<TriagemDetalhe[]>([]);
+  readonly historico = signal<HistoricoResumo[]>([]);
+  readonly carregandoHistorico = signal(false);
   readonly carregandoTriagens = signal(false);
   readonly erro = signal('');
   readonly pagina = signal<PaginaLeads | null>(null);
@@ -139,9 +147,32 @@ export class Admin {
     });
   }
 
+  consultarHistorico(lead: LeadResumo): void {
+    if (!this.autorizacao || this.carregandoHistorico()) return;
+    this.leadDetalhado.set(lead);
+    this.historico.set([]);
+    this.erro.set('');
+    this.carregandoHistorico.set(true);
+    this.http.get<HistoricoResumo[]>(
+      '/api/admin/leads/' + encodeURIComponent(lead.id) + '/historico',
+      { headers: new HttpHeaders({ Authorization: this.autorizacao }) },
+    ).pipe(finalize(() => this.carregandoHistorico.set(false))).subscribe({
+      next: dados => this.historico.set(dados),
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 401 || err.status === 403) {
+          this.sair();
+          this.erro.set('Acesso não autorizado. Entre novamente.');
+        } else {
+          this.erro.set('Não foi possível consultar o histórico.');
+        }
+      },
+    });
+  }
+
   fecharDetalhes(): void {
     this.leadDetalhado.set(null);
     this.triagens.set([]);
+    this.historico.set([]);
   }
 
   sair(): void {
