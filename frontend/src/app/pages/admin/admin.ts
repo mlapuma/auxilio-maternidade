@@ -51,6 +51,8 @@ export class Admin {
   readonly triagens = signal<TriagemDetalhe[]>([]);
   readonly historico = signal<HistoricoResumo[]>([]);
   readonly carregandoHistorico = signal(false);
+  readonly historicoConsultado = signal(false);
+  readonly triagensConsultadas = signal(false);
   readonly carregandoTriagens = signal(false);
   readonly erro = signal('');
   readonly pagina = signal<PaginaLeads | null>(null);
@@ -129,13 +131,17 @@ export class Admin {
     if (!this.autorizacao || this.carregandoTriagens()) return;
     this.leadDetalhado.set(lead);
     this.triagens.set([]);
+    this.triagensConsultadas.set(false);
     this.erro.set('');
     this.carregandoTriagens.set(true);
     this.http.get<TriagemDetalhe[]>(
       '/api/admin/leads/' + encodeURIComponent(lead.id) + '/triagens',
       { headers: new HttpHeaders({ Authorization: this.autorizacao }) },
     ).pipe(finalize(() => this.carregandoTriagens.set(false))).subscribe({
-      next: dados => this.triagens.set(dados),
+      next: dados => {
+        this.triagens.set(dados);
+        this.triagensConsultadas.set(true);
+      },
       error: (err: HttpErrorResponse) => {
         if (err.status === 401 || err.status === 403) {
           this.sair();
@@ -151,13 +157,17 @@ export class Admin {
     if (!this.autorizacao || this.carregandoHistorico()) return;
     this.leadDetalhado.set(lead);
     this.historico.set([]);
+    this.historicoConsultado.set(false);
     this.erro.set('');
     this.carregandoHistorico.set(true);
     this.http.get<HistoricoResumo[]>(
       '/api/admin/leads/' + encodeURIComponent(lead.id) + '/historico',
       { headers: new HttpHeaders({ Authorization: this.autorizacao }) },
     ).pipe(finalize(() => this.carregandoHistorico.set(false))).subscribe({
-      next: dados => this.historico.set(dados),
+      next: dados => {
+        this.historico.set(dados);
+        this.historicoConsultado.set(true);
+      },
       error: (err: HttpErrorResponse) => {
         if (err.status === 401 || err.status === 403) {
           this.sair();
@@ -173,6 +183,8 @@ export class Admin {
     this.leadDetalhado.set(null);
     this.triagens.set([]);
     this.historico.set([]);
+    this.historicoConsultado.set(false);
+    this.triagensConsultadas.set(false);
   }
 
   sair(): void {
