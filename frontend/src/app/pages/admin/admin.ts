@@ -32,6 +32,7 @@ export class Admin {
   private readonly http = inject(HttpClient);
   readonly autenticado = signal(false);
   readonly carregando = signal(false);
+  readonly salvandoId = signal<string | null>(null);
   readonly erro = signal('');
   readonly pagina = signal<PaginaLeads | null>(null);
   readonly filtro = signal('TODOS');
@@ -73,6 +74,33 @@ export class Admin {
           this.erro.set('Credenciais inválidas ou acesso não autorizado.');
         } else {
           this.erro.set('Não foi possível consultar os atendimentos. Verifique a conexão com o servidor.');
+        }
+      },
+    });
+  }
+
+  atualizarStatus(lead: LeadResumo, novoStatus: string): void {
+    if (!this.autorizacao || this.carregando() || this.salvandoId() || novoStatus === lead.status) return;
+    if (!['NOVO', 'EM_ATENDIMENTO', 'CONCLUIDO'].includes(novoStatus)) return;
+    this.erro.set('');
+    this.salvandoId.set(lead.id);
+    this.http.patch<LeadResumo>(
+      '/api/admin/leads/' + encodeURIComponent(lead.id) + '/status',
+      { status: novoStatus },
+      { headers: new HttpHeaders({ Authorization: this.autorizacao }) },
+    ).pipe(finalize(() => this.salvandoId.set(null))).subscribe({
+      next: atualizado => {
+        this.pagina.update(pagina => pagina ? {
+          ...pagina,
+          content: pagina.content.map(item => item.id === atualizado.id ? atualizado : item),
+        } : null);
+      },
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 401 || err.status === 403) {
+          this.sair();
+          this.erro.set('Sua sessão não está autorizada. Entre novamente.');
+        } else {
+          this.erro.set('Não foi possível atualizar o atendimento. Tente novamente.');
         }
       },
     });
