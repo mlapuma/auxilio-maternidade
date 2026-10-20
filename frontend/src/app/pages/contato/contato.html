@@ -5,6 +5,7 @@
     <p>Preencha seus dados para solicitar um atendimento individual. O envio não garante direito ao benefício.</p>
     @if (protocolo()) {
       <div class="sucesso" role="status">Contato registrado com sucesso. Protocolo: <strong>{{ protocolo() }}</strong>. Aguarde o retorno da equipe.</div>
+      @if (aviso()) { <p role="status">{{ aviso() }}</p> }
       <button type="button" (click)="protocolo.set('')">Enviar outro contato</button>
     } @else {
       <form #form="ngForm" (ngSubmit)="enviar(form)">
