@@ -3,6 +3,8 @@ package br.com.salario.maternidade.admin;
 import br.com.salario.maternidade.config.SecurityConfig;
 import br.com.salario.maternidade.lead.LeadRepository;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import org.springframework.http.MediaType;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,31 @@ import org.springframework.test.web.servlet.MockMvc;
 class AdminLeadControllerTest {
     @Autowired MockMvc mvc;
     @MockitoBean LeadRepository repository;
+
+    @Test
+    void bloqueiaAlteracaoAnonima() throws Exception {
+        mvc.perform(patch("/api/admin/leads/00000000-0000-0000-0000-000000000001/status")
+                .contentType(MediaType.APPLICATION_JSON).content("{\\"status\\":\\"CONCLUIDO\\"}"))
+            .andExpect(status().isUnauthorized());
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void rejeitaStatusInvalido() throws Exception {
+        mvc.perform(patch("/api/admin/leads/00000000-0000-0000-0000-000000000001/status")
+                .contentType(MediaType.APPLICATION_JSON).content("{\\"status\\":\\"INDEFINIDO\\"}"))
+            .andExpect(status().isBadRequest());
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void rejeitaAtendimentoInexistente() throws Exception {
+        mvc.perform(patch("/api/admin/leads/00000000-0000-0000-0000-000000000001/status")
+                .contentType(MediaType.APPLICATION_JSON).content("{\\"status\\":\\"CONCLUIDO\\"}"))
+            .andExpect(status().isNotFound());
+    }
 
     @Test
     void bloqueiaAcessoAnonimo() throws Exception {
