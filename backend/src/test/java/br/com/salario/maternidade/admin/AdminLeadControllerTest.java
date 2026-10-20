@@ -66,4 +66,37 @@ class AdminLeadControllerTest {
         mvc.perform(get("/api/admin/leads?size=101")).andExpect(status().isBadRequest());
         verifyNoInteractions(repository);
     }
+    @Test
+    void bloqueiaHistoricoAnonimo() throws Exception {
+        mvc.perform(get("/api/admin/leads/00000000-0000-0000-0000-000000000001/historico"))
+            .andExpect(status().isUnauthorized());
+        verifyNoInteractions(repository, historico);
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void bloqueiaHistoricoSemPermissao() throws Exception {
+        mvc.perform(get("/api/admin/leads/00000000-0000-0000-0000-000000000001/historico"))
+            .andExpect(status().isForbidden());
+        verifyNoInteractions(repository, historico);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void retorna404ParaHistoricoDeLeadInexistente() throws Exception {
+        mvc.perform(get("/api/admin/leads/00000000-0000-0000-0000-000000000001/historico"))
+            .andExpect(status().isNotFound());
+        verifyNoInteractions(historico);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void permiteConsultarHistorico() throws Exception {
+        java.util.UUID id = java.util.UUID.fromString("00000000-0000-0000-0000-000000000001");
+        when(repository.existsById(id)).thenReturn(true);
+        mvc.perform(get("/api/admin/leads/" + id + "/historico"))
+            .andExpect(status().isOk());
+        verify(historico).findByLeadIdOrderByAlteradoEmDesc(id);
+    }
+
 }
