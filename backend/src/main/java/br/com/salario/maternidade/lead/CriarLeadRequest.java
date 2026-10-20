@@ -8,5 +8,5 @@ public record CriarLeadRequest(
     @Email @Size(max = 254) String email,
     @Size(max = 80) String origem,
     @NotBlank @Size(max = 20) String avisoPrivacidadeVersao,
-    @NotNull Boolean consentimentoContato
+    @NotNull @AssertTrue Boolean consentimentoContato
 ) {}
