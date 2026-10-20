@@ -17,12 +17,11 @@
         <button type="button" class="principal" (click)="avancar()" [disabled]="!respostas[etapa()]">Continuar</button>
       </div>
     } @else {
-      <h1>Respostas registradas nesta sessão</h1>
-      <p>Essas informações são apenas iniciais. Não é possível confirmar o direito ao benefício com estas respostas.</p>
-      <p>Para uma avaliação individual, converse com a equipe responsável.</p>
-      <a routerLink="/contato" class="link-acao">Ir para contato →</a>
+      <h1>Questionário concluído</h1>
+      <p>Suas respostas são informativas e não confirmam direito ao benefício. A avaliação jurídica será feita pela equipe.</p>
+      <button type="button" class="principal" (click)="irParaContato()">Ir para contato →</button>
       <button type="button" (click)="voltar()">Revisar respostas</button>
     }
-    <p class="aviso">Não informe CPF, dados de saúde ou documentos nesta etapa. Suas respostas ainda não são enviadas ao servidor.</p>
+    <p class="aviso">Não informe CPF, dados de saúde ou documentos nesta etapa. As respostas serão enviadas ao servidor somente após o cadastro de contato, quando puderem ser representadas sem suposições.</p>
   </section>
 </main>
