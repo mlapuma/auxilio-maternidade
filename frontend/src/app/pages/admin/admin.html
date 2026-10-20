@@ -32,14 +32,32 @@
       @if (carregando()) { <p role="status">Carregando...</p> }
       <div class="tabela-scroll">
         <table>
-          <thead><tr><th>Protocolo</th><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Status</th><th>Cadastro</th></tr></thead>
+          <thead><tr><th>Protocolo</th><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Status</th><th>Cadastro</th><th>Questionário</th></tr></thead>
           <tbody>
             @for (lead of registrosFiltrados; track lead.id) {
-              <tr><td>{{ lead.protocolo }}</td><td>{{ lead.nome }}</td><td>{{ lead.telefone }}</td><td>{{ lead.email || '—' }}</td><td><select [name]="'status-' + lead.id" [ngModel]="lead.status" (ngModelChange)="atualizarStatus(lead, $event)" [disabled]="!!salvandoId() || carregando()" [attr.aria-label]="'Status do atendimento ' + lead.protocolo"><option value="NOVO">Novo</option><option value="EM_ATENDIMENTO">Em atendimento</option><option value="CONCLUIDO">Concluído</option></select></td><td>{{ lead.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td></tr>
-            } @empty { <tr><td colspan="6">Nenhum cadastro encontrado nesta página.</td></tr> }
+              <tr><td>{{ lead.protocolo }}</td><td>{{ lead.nome }}</td><td>{{ lead.telefone }}</td><td>{{ lead.email || '—' }}</td><td><select [name]="'status-' + lead.id" [ngModel]="lead.status" (ngModelChange)="atualizarStatus(lead, $event)" [disabled]="!!salvandoId() || carregando()" [attr.aria-label]="'Status do atendimento ' + lead.protocolo"><option value="NOVO">Novo</option><option value="EM_ATENDIMENTO">Em atendimento</option><option value="CONCLUIDO">Concluído</option></select></td><td>{{ lead.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td><td><button type="button" (click)="consultarTriagens(lead)" [disabled]="carregandoTriagens()">Ver respostas</button></td></tr>
+            } @empty { <tr><td colspan="7">Nenhum cadastro encontrado nesta página.</td></tr> }
           </tbody>
         </table>
       </div>
+      @if (leadDetalhado(); as selecionado) {
+        <section class="detalhes" aria-label="Respostas do questionário">
+          <div class="barra"><h3>Questionário — {{ selecionado.protocolo }}</h3><button type="button" (click)="fecharDetalhes()">Fechar</button></div>
+          @if (carregandoTriagens()) { <p role="status">Carregando respostas...</p> }
+          @for (triagem of triagens(); track triagem.id) {
+            <article>
+              <p><strong>Data:</strong> {{ triagem.criadoEm | date:'dd/MM/yyyy HH:mm' }}</p>
+              <p><strong>Classificação preliminar:</strong> {{ triagem.classificacao }}</p>
+              <p><strong>Nascimento ou adoção:</strong> {{ triagem.houveNascimentoOuAdocao ? 'Sim' : 'Não' }}</p>
+              <p><strong>Vínculo ou contribuição:</strong> {{ triagem.possuiVinculoOuContribuicao ? 'Sim' : 'Não' }}</p>
+              <p><strong>Deseja atendimento:</strong> {{ triagem.desejaAtendimento ? 'Sim' : 'Não' }}</p>
+            </article>
+          } @empty {
+            @if (!carregandoTriagens()) { <p>Não há questionários registrados para este atendimento.</p> }
+          }
+          <p class="aviso">A classificação é apenas preliminar e não substitui avaliação jurídica.</p>
+        </section>
+      }
       <nav class="paginacao" aria-label="Paginação">
         <button type="button" [disabled]="carregando() || !pagina() || pagina()!.number === 0" (click)="carregar(pagina()!.number - 1)">Anterior</button>
         <span>Página {{ (pagina()?.number ?? 0) + 1 }} de {{ pagina()?.totalPages || 1 }}</span>
