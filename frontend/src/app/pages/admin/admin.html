@@ -35,7 +35,7 @@
           <thead><tr><th>Protocolo</th><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Status</th><th>Cadastro</th></tr></thead>
           <tbody>
             @for (lead of registrosFiltrados; track lead.id) {
-              <tr><td>{{ lead.protocolo }}</td><td>{{ lead.nome }}</td><td>{{ lead.telefone }}</td><td>{{ lead.email || '—' }}</td><td>{{ lead.status }}</td><td>{{ lead.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td></tr>
+              <tr><td>{{ lead.protocolo }}</td><td>{{ lead.nome }}</td><td>{{ lead.telefone }}</td><td>{{ lead.email || '—' }}</td><td><select [name]="'status-' + lead.id" [ngModel]="lead.status" (ngModelChange)="atualizarStatus(lead, $event)" [disabled]="!!salvandoId() || carregando()" [attr.aria-label]="'Status do atendimento ' + lead.protocolo"><option value="NOVO">Novo</option><option value="EM_ATENDIMENTO">Em atendimento</option><option value="CONCLUIDO">Concluído</option></select></td><td>{{ lead.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td></tr>
             } @empty { <tr><td colspan="6">Nenhum cadastro encontrado nesta página.</td></tr> }
           </tbody>
         </table>
