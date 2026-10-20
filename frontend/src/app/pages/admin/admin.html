@@ -9,20 +9,43 @@
   </header>
 
   @if (!autenticado()) {
-    <section class="bloqueio" role="status">
-      <h2>Acesso restrito</h2>
-      <p>O painel está em desenvolvimento. A consulta de clientes será habilitada somente após implementar autenticação e controle de acesso no servidor.</p>
-      <p>Nenhum dado pessoal é carregado nesta tela.</p>
+    <section class="bloqueio">
+      <h2>Acesso administrativo</h2>
+      <p>Informe as credenciais configuradas no servidor. Os dados dos clientes só serão solicitados após a autenticação.</p>
+      <form (ngSubmit)="entrar()">
+        <label>Usuário <input name="usuario" autocomplete="username" [(ngModel)]="usuario" required /></label>
+        <label>Senha <input name="senha" type="password" autocomplete="current-password" [(ngModel)]="senha" required /></label>
+        <button type="submit" [disabled]="carregando() || !usuario.trim() || !senha">{{ carregando() ? 'Validando...' : 'Entrar' }}</button>
+      </form>
+      <p class="aviso">Use somente em ambiente HTTPS. O acesso usa autenticação HTTP Basic e não persiste credenciais no navegador.</p>
     </section>
   } @else {
     <section class="conteudo">
-      <h2>Atendimentos</h2>
-      <div class="filtros" aria-label="Filtrar atendimentos">
+      <div class="barra"><h2>Atendimentos</h2><button type="button" (click)="sair()">Sair</button></div>
+      <p>Total de cadastros: <strong>{{ pagina()?.totalElements ?? 0 }}</strong></p>
+      <div class="filtros" aria-label="Filtrar atendimentos da página atual">
         @for (f of filtros; track f.valor) {
-          <button type="button" [class.ativo]="filtro() === f.valor" (click)="filtro.set(f.valor)">{{ f.rotulo }}</button>
+          <button type="button" [class.ativo]="filtro() === f.valor" (click)="alterarFiltro(f.valor)">{{ f.rotulo }}</button>
         }
       </div>
-      <p>Não há dados disponíveis.</p>
+      <p class="aviso">Os filtros são aplicados apenas aos registros da página atual.</p>
+      @if (carregando()) { <p role="status">Carregando...</p> }
+      <div class="tabela-scroll">
+        <table>
+          <thead><tr><th>Protocolo</th><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Status</th><th>Cadastro</th></tr></thead>
+          <tbody>
+            @for (lead of registrosFiltrados; track lead.id) {
+              <tr><td>{{ lead.protocolo }}</td><td>{{ lead.nome }}</td><td>{{ lead.telefone }}</td><td>{{ lead.email || '—' }}</td><td>{{ lead.status }}</td><td>{{ lead.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td></tr>
+            } @empty { <tr><td colspan="6">Nenhum cadastro encontrado nesta página.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <nav class="paginacao" aria-label="Paginação">
+        <button type="button" [disabled]="carregando() || !pagina() || pagina()!.number === 0" (click)="carregar(pagina()!.number - 1)">Anterior</button>
+        <span>Página {{ (pagina()?.number ?? 0) + 1 }} de {{ pagina()?.totalPages || 1 }}</span>
+        <button type="button" [disabled]="carregando() || !pagina() || pagina()!.number + 1 >= pagina()!.totalPages" (click)="carregar(pagina()!.number + 1)">Próxima</button>
+      </nav>
     </section>
   }
+  @if (erro()) { <p class="erro" role="alert">{{ erro() }}</p> }
 </main>
