@@ -53,7 +53,7 @@
               <p><strong>Deseja atendimento:</strong> {{ triagem.desejaAtendimento ? 'Sim' : 'Não' }}</p>
             </article>
           } @empty {
-            @if (!carregandoTriagens()) { <p>Não há questionários registrados para este atendimento.</p> }
+            @if (!carregandoTriagens() && triagensConsultadas()) { <p>Não há questionários registrados para este atendimento.</p> }
           }
           <div class="historico">
             <h4>Histórico de alterações</h4>
@@ -61,7 +61,7 @@
             @for (item of historico(); track item.id) {
               <p>{{ item.alteradoEm | date:'dd/MM/yyyy HH:mm' }} — {{ item.statusAnterior }} → {{ item.statusNovo }}</p>
             } @empty {
-              @if (!carregandoHistorico()) { <p>Nenhuma alteração registrada ou histórico ainda não consultado.</p> }
+              @if (!carregandoHistorico() && historicoConsultado()) { <p>Nenhuma alteração registrada.</p> }
             }
           </div>
           <p class="aviso">A classificação é apenas preliminar e não substitui avaliação jurídica.</p>
