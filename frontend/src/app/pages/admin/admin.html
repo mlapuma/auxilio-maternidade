@@ -23,12 +23,11 @@
     <section class="conteudo">
       <div class="barra"><h2>Atendimentos</h2><button type="button" (click)="sair()">Sair</button></div>
       <p>Total de cadastros: <strong>{{ pagina()?.totalElements ?? 0 }}</strong></p>
-      <div class="filtros" aria-label="Filtrar atendimentos da página atual">
+      <div class="filtros" aria-label="Filtrar atendimentos">
         @for (f of filtros; track f.valor) {
           <button type="button" [class.ativo]="filtro() === f.valor" (click)="alterarFiltro(f.valor)">{{ f.rotulo }}</button>
         }
       </div>
-      <p class="aviso">Os filtros são aplicados apenas aos registros da página atual.</p>
       @if (carregando()) { <p role="status">Carregando...</p> }
       <div class="tabela-scroll">
         <table>
