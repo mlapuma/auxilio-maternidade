@@ -6,6 +6,8 @@ import br.com.salario.maternidade.lead.Lead;
 import java.util.UUID;
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -136,6 +138,24 @@ class AdminLeadControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("NOVO"));
         verifyNoInteractions(historico);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void filtraStatusNoRepositorio() throws Exception {
+        when(repository.findByStatus(eq("NOVO"), any(Pageable.class))).thenReturn(Page.empty());
+        mvc.perform(get("/api/admin/leads?status=NOVO"))
+            .andExpect(status().isOk());
+        verify(repository).findByStatus(eq("NOVO"), any(Pageable.class));
+        verify(repository, never()).findAll(any(Pageable.class));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void rejeitaFiltroDeStatusInvalido() throws Exception {
+        mvc.perform(get("/api/admin/leads?status=INDEFINIDO"))
+            .andExpect(status().isBadRequest());
+        verifyNoInteractions(repository);
     }
 
 }
