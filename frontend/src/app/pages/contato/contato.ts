@@ -2,7 +2,8 @@ import { Component, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, switchMap, catchError, of, map } from 'rxjs';
+import type { RespostasTriagem } from '../questionario/questionario';
 
 interface LeadResponse { id: string; protocolo: string; status: string; criadoEm: string; }
 
@@ -15,9 +16,11 @@ interface LeadResponse { id: string; protocolo: string; status: string; criadoEm
 })
 export class Contato {
   private readonly http = inject(HttpClient);
+  private readonly respostasTriagem: RespostasTriagem | null = history.state?.respostasTriagem ?? null;
   readonly enviando = signal(false);
   readonly protocolo = signal('');
   readonly erro = signal('');
+  readonly aviso = signal('');
   nome = '';
   email = '';
   telefone = '';
@@ -26,6 +29,7 @@ export class Contato {
   enviar(form: NgForm): void {
     if (form.invalid || !this.consentimento || this.enviando()) return;
     this.erro.set('');
+    this.aviso.set('');
     this.enviando.set(true);
     this.http.post<LeadResponse>('/api/leads', {
       nome: this.nome.trim(),
@@ -34,8 +38,25 @@ export class Contato {
       origem: 'SITE',
       avisoPrivacidadeVersao: 'v1',
       consentimentoContato: this.consentimento,
-    }).pipe(finalize(() => this.enviando.set(false))).subscribe({
-      next: (lead) => { this.protocolo.set(lead.protocolo); form.resetForm(); },
+    }).pipe(
+      switchMap(lead => {
+        if (!this.respostasTriagem) return of({ lead, triagemSalva: false, naoAplicavel: true });
+        return this.http.post('/api/triagens', {
+          leadId: lead.id,
+          respostas: this.respostasTriagem,
+        }).pipe(
+          map(() => ({ lead, triagemSalva: true, naoAplicavel: false })),
+          catchError(() => of({ lead, triagemSalva: false, naoAplicavel: false })),
+        );
+      }),
+      finalize(() => this.enviando.set(false)),
+    ).subscribe({
+      next: ({ lead, triagemSalva, naoAplicavel }) => {
+        this.protocolo.set(lead.protocolo);
+        if (!triagemSalva && !naoAplicavel) this.aviso.set('Contato registrado, mas as respostas do questionário não foram salvas. Informe seu protocolo à equipe.');
+        if (naoAplicavel) this.aviso.set('A equipe fará a avaliação individual das informações.');
+        form.resetForm();
+      },
       error: (error: HttpErrorResponse) => {
         this.erro.set(error.status === 0
           ? 'Não foi possível conectar ao servidor. Tente novamente.'
