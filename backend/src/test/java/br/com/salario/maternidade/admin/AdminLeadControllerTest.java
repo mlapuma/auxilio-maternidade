@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 class AdminLeadControllerTest {
     @Autowired MockMvc mvc;
     @MockitoBean LeadRepository repository;
+    @MockitoBean HistoricoStatusRepository historico;
 
     @Test
     void bloqueiaAlteracaoAnonima() throws Exception {
