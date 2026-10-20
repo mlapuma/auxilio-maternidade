@@ -32,4 +32,10 @@ public class Triagem {
         this.classificacao = classificacao;
         this.criadoEm = OffsetDateTime.now(java.time.ZoneOffset.UTC);
     }
+    public UUID getId() { return id; }
+    public String getClassificacao() { return classificacao; }
+    public boolean isHouveNascimentoOuAdocao() { return houveNascimentoOuAdocao; }
+    public boolean isPossuiVinculoOuContribuicao() { return possuiVinculoOuContribuicao; }
+    public boolean isDesejaAtendimento() { return desejaAtendimento; }
+    public OffsetDateTime getCriadoEm() { return criadoEm; }
 }
