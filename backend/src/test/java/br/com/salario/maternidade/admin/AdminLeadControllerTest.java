@@ -2,6 +2,11 @@ package br.com.salario.maternidade.admin;
 
 import br.com.salario.maternidade.config.SecurityConfig;
 import br.com.salario.maternidade.lead.LeadRepository;
+import br.com.salario.maternidade.lead.Lead;
+import java.util.UUID;
+import java.time.OffsetDateTime;
+import java.util.Optional;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import org.springframework.http.MediaType;
@@ -97,6 +102,40 @@ class AdminLeadControllerTest {
         mvc.perform(get("/api/admin/leads/" + id + "/historico"))
             .andExpect(status().isOk());
         verify(historico).findByLeadIdOrderByAlteradoEmDesc(id);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void registraMudancaDeStatus() throws Exception {
+        UUID id = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        Lead lead = new Lead(id, "PROTOCOLO1", "Cliente Teste", "11999999999",
+            null, "SITE", "v1", true, OffsetDateTime.now());
+        when(repository.findById(id)).thenReturn(Optional.of(lead));
+        when(repository.save(lead)).thenReturn(lead);
+
+        mvc.perform(patch("/api/admin/leads/" + id + "/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\\"status\\":\\"EM_ATENDIMENTO\\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("EM_ATENDIMENTO"));
+        verify(historico).save(any(HistoricoStatus.class));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void naoRegistraHistoricoQuandoStatusNaoMuda() throws Exception {
+        UUID id = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        Lead lead = new Lead(id, "PROTOCOLO1", "Cliente Teste", "11999999999",
+            null, "SITE", "v1", true, OffsetDateTime.now());
+        when(repository.findById(id)).thenReturn(Optional.of(lead));
+        when(repository.save(lead)).thenReturn(lead);
+
+        mvc.perform(patch("/api/admin/leads/" + id + "/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\\"status\\":\\"NOVO\\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("NOVO"));
+        verifyNoInteractions(historico);
     }
 
 }
