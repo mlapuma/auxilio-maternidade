@@ -115,7 +115,7 @@ class AdminLeadControllerTest {
 
         mvc.perform(patch("/api/admin/leads/" + id + "/status")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\\"status\\":\\"EM_ATENDIMENTO\\"}"))
+                .content("{\"status\":\"EM_ATENDIMENTO\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("EM_ATENDIMENTO"));
         verify(historico).save(any(HistoricoStatus.class));
@@ -132,7 +132,7 @@ class AdminLeadControllerTest {
 
         mvc.perform(patch("/api/admin/leads/" + id + "/status")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\\"status\\":\\"NOVO\\"}"))
+                .content("{\"status\":\"NOVO\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("NOVO"));
         verifyNoInteractions(historico);
