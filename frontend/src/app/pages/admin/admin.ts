@@ -48,6 +48,7 @@ export class Admin {
   readonly carregando = signal(false);
   readonly salvandoId = signal<string | null>(null);
   readonly leadDetalhado = signal<LeadResumo | null>(null);
+  readonly tipoDetalhe = signal<'triagens' | 'historico' | null>(null);
   readonly triagens = signal<TriagemDetalhe[]>([]);
   readonly historico = signal<HistoricoResumo[]>([]);
   readonly carregandoHistorico = signal(false);
@@ -134,6 +135,7 @@ export class Admin {
     if (!this.autorizacao || this.carregandoTriagens()) return;
     if (this.leadDetalhado()?.id !== lead.id) this.fecharDetalhes();
     this.leadDetalhado.set(lead);
+    this.tipoDetalhe.set('triagens');
     this.triagens.set([]);
     this.triagensConsultadas.set(false);
     this.erro.set('');
@@ -143,6 +145,7 @@ export class Admin {
       { headers: new HttpHeaders({ Authorization: this.autorizacao }) },
     ).pipe(finalize(() => this.carregandoTriagens.set(false))).subscribe({
       next: dados => {
+        if (this.leadDetalhado()?.id !== lead.id || this.tipoDetalhe() !== 'triagens') return;
         this.triagens.set(dados);
         this.triagensConsultadas.set(true);
       },
@@ -161,6 +164,7 @@ export class Admin {
     if (!this.autorizacao || this.carregandoHistorico()) return;
     if (this.leadDetalhado()?.id !== lead.id) this.fecharDetalhes();
     this.leadDetalhado.set(lead);
+    this.tipoDetalhe.set('historico');
     this.historico.set([]);
     this.historicoConsultado.set(false);
     this.erro.set('');
@@ -170,6 +174,7 @@ export class Admin {
       { headers: new HttpHeaders({ Authorization: this.autorizacao }) },
     ).pipe(finalize(() => this.carregandoHistorico.set(false))).subscribe({
       next: dados => {
+        if (this.leadDetalhado()?.id !== lead.id || this.tipoDetalhe() !== 'historico') return;
         this.historico.set(dados);
         this.historicoConsultado.set(true);
       },
@@ -186,6 +191,7 @@ export class Admin {
 
   fecharDetalhes(): void {
     this.leadDetalhado.set(null);
+    this.tipoDetalhe.set(null);
     this.triagens.set([]);
     this.historico.set([]);
     this.historicoConsultado.set(false);
