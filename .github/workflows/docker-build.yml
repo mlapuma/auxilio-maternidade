@@ -1,0 +1,24 @@
+name: Docker Build
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'compose.prod.yml'
+      - '.github/workflows/docker-build.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'compose.prod.yml'
+      - '.github/workflows/docker-build.yml'
+jobs:
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir backend
+        run: docker build -t auxilio-backend:test ./backend
+      - name: Construir frontend
+        run: docker build -t auxilio-frontend:test ./frontend
