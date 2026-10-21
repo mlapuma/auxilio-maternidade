@@ -1,10 +1,11 @@
 <main class="questionario">
   <a routerLink="/" class="voltar-home">← Voltar ao início</a>
+  <div class="gestante-topo" role="img" aria-label="Ilustração de uma gestante sorridente"></div>
   <section class="painel" aria-label="Questionário de pré-análise do salário-maternidade">
     <span class="etiqueta">🤰 Pré-análise informativa e gratuita</span>
-    <p class="orientacao">Vamos entender sua situação em poucas perguntas. Cada resposta ajuda a orientar os próximos passos sobre o salário-maternidade no INSS.</p>
+    <p class="orientacao">Vamos entender sua situação em poucas perguntas para orientar os próximos passos sobre o salário-maternidade.</p>
     @if (!concluido) {
-      <p>Etapa {{ etapa() + 1 }} de {{ perguntas.length }}</p>
+      <p class="etapa-texto">Etapa {{ etapa() + 1 }} de {{ perguntas.length }}</p>
       <progress [value]="etapa() + 1" [max]="perguntas.length"></progress>
       <h1>{{ perguntas[etapa()].titulo }}</h1>
       <fieldset>
