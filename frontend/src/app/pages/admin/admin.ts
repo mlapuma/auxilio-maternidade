@@ -57,6 +57,7 @@ export class Admin {
   readonly erro = signal('');
   readonly pagina = signal<PaginaLeads | null>(null);
   readonly filtro = signal('TODOS');
+  readonly busca = signal('');
   readonly filtros = [
     { valor: 'TODOS', rotulo: 'Todos' },
     { valor: 'NOVO', rotulo: 'Novos' },
@@ -210,7 +211,19 @@ export class Admin {
   }
 
   get registrosFiltrados(): LeadResumo[] {
+    const termo = this.busca().trim().toLocaleLowerCase('pt-BR');
     const dados = this.pagina()?.content ?? [];
-    return dados;
+    if (!termo) return dados;
+    return dados.filter(lead => [lead.nome, lead.protocolo, lead.telefone, lead.email ?? '']
+      .some(campo => campo.toLocaleLowerCase('pt-BR').includes(termo)));
+  }
+
+  get resumoPagina(): { novos: number; emAtendimento: number; concluidos: number } {
+    const dados = this.pagina()?.content ?? [];
+    return {
+      novos: dados.filter(lead => lead.status === 'NOVO').length,
+      emAtendimento: dados.filter(lead => lead.status === 'EM_ATENDIMENTO').length,
+      concluidos: dados.filter(lead => lead.status === 'CONCLUIDO').length,
+    };
   }
 }
