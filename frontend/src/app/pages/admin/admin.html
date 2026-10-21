@@ -22,7 +22,16 @@
   } @else {
     <section class="conteudo">
       <div class="barra"><h2>Atendimentos</h2><button type="button" (click)="sair()">Sair</button></div>
-      <p>Total de cadastros: <strong>{{ pagina()?.totalElements ?? 0 }}</strong></p>
+      <p>Total de cadastros no filtro atual: <strong>{{ pagina()?.totalElements ?? 0 }}</strong></p>
+      <div class="indicadores" aria-label="Resumo da página atual">
+        <div><span>Novos nesta página</span><strong>{{ resumoPagina.novos }}</strong></div>
+        <div><span>Em atendimento nesta página</span><strong>{{ resumoPagina.emAtendimento }}</strong></div>
+        <div><span>Concluídos nesta página</span><strong>{{ resumoPagina.concluidos }}</strong></div>
+      </div>
+      <div class="ferramentas">
+        <label>Buscar nesta página <input type="search" name="busca" [ngModel]="busca()" (ngModelChange)="busca.set($event)" placeholder="Nome, protocolo, telefone ou e-mail" autocomplete="off" /></label>
+        <button type="button" (click)="carregar(pagina()?.number ?? 0)" [disabled]="carregando()">Atualizar lista</button>
+      </div>
       <div class="filtros" aria-label="Filtrar atendimentos">
         @for (f of filtros; track f.valor) {
           <button type="button" [class.ativo]="filtro() === f.valor" (click)="alterarFiltro(f.valor)">{{ f.rotulo }}</button>
@@ -35,7 +44,7 @@
           <tbody>
             @for (lead of registrosFiltrados; track lead.id) {
               <tr><td>{{ lead.protocolo }}</td><td>{{ lead.nome }}</td><td>{{ lead.telefone }}</td><td>{{ lead.email || '—' }}</td><td><select [name]="'status-' + lead.id" [ngModel]="lead.status" (ngModelChange)="atualizarStatus(lead, $event)" [disabled]="!!salvandoId() || carregando()" [attr.aria-label]="'Status do atendimento ' + lead.protocolo"><option value="NOVO">Novo</option><option value="EM_ATENDIMENTO">Em atendimento</option><option value="CONCLUIDO">Concluído</option></select></td><td>{{ lead.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td><td><button type="button" (click)="consultarTriagens(lead)" [disabled]="carregandoTriagens()">Ver respostas</button></td><td><button type="button" (click)="consultarHistorico(lead)" [disabled]="carregandoHistorico()">Ver histórico</button></td></tr>
-            } @empty { <tr><td colspan="8">Nenhum cadastro encontrado nesta página.</td></tr> }
+            } @empty { <tr><td colspan="8">Nenhum cadastro corresponde aos filtros desta página.</td></tr> }
           </tbody>
         </table>
       </div>
