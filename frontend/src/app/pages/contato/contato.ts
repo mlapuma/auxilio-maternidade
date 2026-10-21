@@ -26,6 +26,10 @@ export class Contato {
   telefone = '';
   consentimento = false;
 
+  limitarTelefone(valor: string): void {
+    this.telefone = valor.replace(/\D/g, '').slice(0, 11);
+  }
+
   enviar(form: NgForm): void {
     if (form.invalid || !this.consentimento || this.enviando()) return;
     this.erro.set('');
