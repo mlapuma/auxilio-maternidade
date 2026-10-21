@@ -1,1 +1,23 @@
-<p>contato works!</p>
+<main class="contato">
+  <section class="painel">
+    <a routerLink="/questionario">← Voltar ao questionário</a>
+    <h1>Fale com nossa equipe</h1>
+    <p>Preencha seus dados para solicitar um atendimento individual. O envio não garante direito ao benefício.</p>
+    @if (protocolo()) {
+      <div class="sucesso" role="status">Contato registrado com sucesso. Protocolo: <strong>{{ protocolo() }}</strong>. Aguarde o retorno da equipe.</div>
+      @if (aviso()) { <p role="status">{{ aviso() }}</p> }
+      <button type="button" (click)="protocolo.set('')">Enviar outro contato</button>
+    } @else {
+      <form #form="ngForm" (ngSubmit)="enviar(form)">
+        <label>Nome completo <input name="nome" [(ngModel)]="nome" required minlength="3" maxlength="160" autocomplete="name" /></label>
+        <label>E-mail <input name="email" type="email" [(ngModel)]="email" email maxlength="254" autocomplete="email" /></label>
+        <label>Telefone com DDD <input name="telefone" type="tel" [(ngModel)]="telefone" required pattern="[0-9()+.\\s-]{10,20}" maxlength="20" autocomplete="tel" /></label>
+        <label class="consentimento"><input type="checkbox" name="consentimento" [(ngModel)]="consentimento" required />
+          Concordo que meus dados de contato sejam utilizados pelo escritório para responder à minha solicitação. Consulte a política de privacidade antes de enviar.</label>
+        @if (erro()) { <p role="alert" class="erro">{{ erro() }}</p> }
+        <button type="submit" [disabled]="form.invalid || !consentimento || enviando()">{{ enviando() ? 'Enviando...' : 'Solicitar contato' }}</button>
+      </form>
+    }
+    <p class="aviso">Não envie CPF, documentos ou informações de saúde neste formulário.</p>
+  </section>
+</main>

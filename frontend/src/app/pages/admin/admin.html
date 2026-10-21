@@ -1,1 +1,77 @@
-<p>admin works!</p>
+<main class="admin">
+  <header class="cabecalho">
+    <div>
+      <span class="etiqueta">Área restrita · Escritório</span>
+      <h1>Painel de atendimentos</h1>
+      <p>Organização dos interessados no salário-maternidade.</p>
+    </div>
+    <a routerLink="/">Voltar ao site</a>
+  </header>
+
+  @if (!autenticado()) {
+    <section class="bloqueio">
+      <h2>Acesso administrativo</h2>
+      <p>Informe as credenciais configuradas no servidor. Os dados dos clientes só serão solicitados após a autenticação.</p>
+      <form (ngSubmit)="entrar()">
+        <label>Usuário <input name="usuario" autocomplete="username" [(ngModel)]="usuario" required /></label>
+        <label>Senha <input name="senha" type="password" autocomplete="current-password" [(ngModel)]="senha" required /></label>
+        <button type="submit" [disabled]="carregando() || !usuario.trim() || !senha">{{ carregando() ? 'Validando...' : 'Entrar' }}</button>
+      </form>
+      <p class="aviso">Use somente em ambiente HTTPS. O acesso usa autenticação HTTP Basic e não persiste credenciais no navegador.</p>
+    </section>
+  } @else {
+    <section class="conteudo">
+      <div class="barra"><h2>Atendimentos</h2><button type="button" (click)="sair()">Sair</button></div>
+      <p>Total de cadastros: <strong>{{ pagina()?.totalElements ?? 0 }}</strong></p>
+      <div class="filtros" aria-label="Filtrar atendimentos">
+        @for (f of filtros; track f.valor) {
+          <button type="button" [class.ativo]="filtro() === f.valor" (click)="alterarFiltro(f.valor)">{{ f.rotulo }}</button>
+        }
+      </div>
+      @if (carregando()) { <p role="status">Carregando...</p> }
+      <div class="tabela-scroll">
+        <table>
+          <thead><tr><th>Protocolo</th><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Status</th><th>Cadastro</th><th>Questionário</th><th>Histórico</th></tr></thead>
+          <tbody>
+            @for (lead of registrosFiltrados; track lead.id) {
+              <tr><td>{{ lead.protocolo }}</td><td>{{ lead.nome }}</td><td>{{ lead.telefone }}</td><td>{{ lead.email || '—' }}</td><td><select [name]="'status-' + lead.id" [ngModel]="lead.status" (ngModelChange)="atualizarStatus(lead, $event)" [disabled]="!!salvandoId() || carregando()" [attr.aria-label]="'Status do atendimento ' + lead.protocolo"><option value="NOVO">Novo</option><option value="EM_ATENDIMENTO">Em atendimento</option><option value="CONCLUIDO">Concluído</option></select></td><td>{{ lead.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td><td><button type="button" (click)="consultarTriagens(lead)" [disabled]="carregandoTriagens()">Ver respostas</button></td><td><button type="button" (click)="consultarHistorico(lead)" [disabled]="carregandoHistorico()">Ver histórico</button></td></tr>
+            } @empty { <tr><td colspan="8">Nenhum cadastro encontrado nesta página.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      @if (leadDetalhado(); as selecionado) {
+        <section class="detalhes" aria-label="Respostas do questionário">
+          <div class="barra"><h3>Questionário — {{ selecionado.protocolo }}</h3><button type="button" (click)="fecharDetalhes()">Fechar</button></div>
+          @if (carregandoTriagens()) { <p role="status">Carregando respostas...</p> }
+          @for (triagem of triagens(); track triagem.id) {
+            <article>
+              <p><strong>Data:</strong> {{ triagem.criadoEm | date:'dd/MM/yyyy HH:mm' }}</p>
+              <p><strong>Classificação preliminar:</strong> {{ triagem.classificacao }}</p>
+              <p><strong>Nascimento ou adoção:</strong> {{ triagem.houveNascimentoOuAdocao ? 'Sim' : 'Não' }}</p>
+              <p><strong>Vínculo ou contribuição:</strong> {{ triagem.possuiVinculoOuContribuicao ? 'Sim' : 'Não' }}</p>
+              <p><strong>Deseja atendimento:</strong> {{ triagem.desejaAtendimento ? 'Sim' : 'Não' }}</p>
+            </article>
+          } @empty {
+            @if (!carregandoTriagens() && triagensConsultadas()) { <p>Não há questionários registrados para este atendimento.</p> }
+          }
+          <div class="historico">
+            <h4>Histórico de alterações</h4>
+            @if (carregandoHistorico()) { <p role="status">Carregando histórico...</p> }
+            @for (item of historico(); track item.id) {
+              <p>{{ item.alteradoEm | date:'dd/MM/yyyy HH:mm' }} — {{ item.statusAnterior }} → {{ item.statusNovo }}</p>
+            } @empty {
+              @if (!carregandoHistorico() && historicoConsultado()) { <p>Nenhuma alteração registrada.</p> }
+            }
+          </div>
+          <p class="aviso">A classificação é apenas preliminar e não substitui avaliação jurídica.</p>
+        </section>
+      }
+      <nav class="paginacao" aria-label="Paginação">
+        <button type="button" [disabled]="carregando() || !pagina() || pagina()!.number === 0" (click)="carregar(pagina()!.number - 1)">Anterior</button>
+        <span>Página {{ (pagina()?.number ?? 0) + 1 }} de {{ pagina()?.totalPages || 1 }}</span>
+        <button type="button" [disabled]="carregando() || !pagina() || pagina()!.number + 1 >= pagina()!.totalPages" (click)="carregar(pagina()!.number + 1)">Próxima</button>
+      </nav>
+    </section>
+  }
+  @if (erro()) { <p class="erro" role="alert">{{ erro() }}</p> }
+</main>

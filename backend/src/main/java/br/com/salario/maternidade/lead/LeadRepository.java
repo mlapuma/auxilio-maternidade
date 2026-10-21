@@ -1,6 +1,10 @@
 package br.com.salario.maternidade.lead;
 
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface LeadRepository extends JpaRepository<Lead, UUID> {}
+public interface LeadRepository extends JpaRepository<Lead, UUID> {
+    Page<Lead> findByStatus(String status, Pageable pageable);
+}
