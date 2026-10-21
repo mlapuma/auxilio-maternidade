@@ -26,6 +26,20 @@ export class Contato {
   telefone = '';
   consentimento = false;
 
+  formatarTelefone(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const numeros = input.value.replace(/\D/g, '').slice(0, 11);
+    const ddd = numeros.slice(0, 2);
+    const prefixo = numeros.slice(2, 7);
+    const sufixo = numeros.slice(7, 11);
+    this.telefone = numeros.length > 7
+      ? `(${ddd}) ${prefixo}-${sufixo}`
+      : numeros.length > 2
+        ? `(${ddd}) ${numeros.slice(2)}`
+        : numeros.length > 0 ? `(${ddd}` : '';
+    input.value = this.telefone;
+  }
+
   enviar(form: NgForm): void {
     if (form.invalid || !this.consentimento || this.enviando()) return;
     this.erro.set('');
