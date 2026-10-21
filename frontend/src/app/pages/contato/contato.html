@@ -11,7 +11,7 @@
       <form #form="ngForm" (ngSubmit)="enviar(form)">
         <label>Nome completo <input name="nome" [(ngModel)]="nome" required minlength="3" maxlength="160" autocomplete="name" /></label>
         <label>E-mail <input name="email" type="email" [(ngModel)]="email" email maxlength="254" autocomplete="email" /></label>
-        <label>Telefone com DDD <input name="telefone" type="tel" [(ngModel)]="telefone" required pattern="\\([0-9]{2}\\) [0-9]{5}-[0-9]{4}" maxlength="15" inputmode="numeric" placeholder="(11) 99999-9999" (input)="formatarTelefone($event)" autocomplete="tel-national" /></label>
+        <label>Telefone com DDD <input name="telefone" type="tel" [ngModel]="telefone" (ngModelChange)="formatarTelefone($event)" required pattern="[(][0-9]{2}[)] [0-9]{5}-[0-9]{4}" maxlength="15" inputmode="numeric" placeholder="(11) 99999-9999" autocomplete="tel-national" /></label>
         <label class="consentimento"><input type="checkbox" name="consentimento" [(ngModel)]="consentimento" required />
           Concordo que meus dados de contato sejam utilizados pelo escritório para responder à minha solicitação. Consulte a política de privacidade antes de enviar.</label>
         @if (erro()) { <p role="alert" class="erro">{{ erro() }}</p> }
