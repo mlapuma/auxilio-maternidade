@@ -1,27 +1,38 @@
 <main class="questionario">
   <a routerLink="/" class="voltar-home">← Voltar ao início</a>
-  <section class="painel">
-    <span class="etiqueta">Pré-análise informativa e gratuita</span>
-    @if (!concluido) {
-      <p>Etapa {{ etapa() + 1 }} de {{ perguntas.length }}</p>
-      <progress [value]="etapa() + 1" [max]="perguntas.length"></progress>
-      <h1>{{ perguntas[etapa()].titulo }}</h1>
+  <div class="gestante-topo" role="img" aria-label="Ilustração de gestante sorridente"></div>
+  <section class="painel" aria-label="Pré-análise de salário-maternidade">
+    @if (!concluido && perguntaAtual; as pergunta) {
+      <div class="progresso" aria-label="Progresso da pré-análise">
+        @for (p of perguntas; track p.id; let i = $index) {
+          <span class="ponto" [class.ativo]="i <= etapa()"></span>
+        }
+      </div>
+      <p class="etapa-texto">Etapa {{ etapa() + 1 }} de {{ perguntas.length }}</p>
+      <h1>{{ pergunta.titulo }}</h1>
       <fieldset>
         <legend>Selecione uma opção</legend>
-        @for (opcao of perguntas[etapa()].opcoes; track opcao) {
-          <label class="opcao"><input type="radio" [name]="'pergunta-' + etapa()" [value]="opcao" [(ngModel)]="respostas[etapa()]" /> {{ opcao }}</label>
+        @for (opcao of pergunta.opcoes; track opcao) {
+          <label class="opcao">
+            <input type="radio" [name]="'pergunta-' + pergunta.id" [value]="opcao" [(ngModel)]="respostas[pergunta.id]" />
+            <span>{{ opcao }}</span>
+          </label>
         }
       </fieldset>
+      @if (pergunta.dica) { <p class="dica">ⓘ {{ pergunta.dica }}</p> }
       <div class="acoes">
-        <button type="button" (click)="voltar()" [disabled]="etapa() === 0">Anterior</button>
-        <button type="button" class="principal" (click)="avancar()" [disabled]="!respostas[etapa()]">Continuar</button>
+        <button type="button" (click)="voltar()" [disabled]="etapa() === 0">Voltar</button>
+        <button type="button" class="principal" (click)="avancar()" [disabled]="!respostas[pergunta.id]">Continuar →</button>
       </div>
     } @else {
-      <h1>Questionário concluído</h1>
-      <p>Suas respostas são informativas e não confirmam direito ao benefício. A avaliação jurídica será feita pela equipe.</p>
-      <button type="button" class="principal" (click)="irParaContato()">Ir para contato →</button>
-      <button type="button" (click)="voltar()">Revisar respostas</button>
+      <div class="conclusao">✓</div>
+      <h1>Pronto! Vamos analisar sua situação.</h1>
+      <p>Suas respostas indicam informações para uma avaliação individual, mas não confirmam a concessão do benefício.</p>
+      <div class="acoes">
+        <button type="button" (click)="voltar()">Revisar</button>
+        <button type="button" class="principal" (click)="irParaContato()">Solicitar contato →</button>
+      </div>
     }
-    <p class="aviso">Não informe CPF, dados de saúde ou documentos nesta etapa. As respostas serão enviadas ao servidor somente após o cadastro de contato, quando puderem ser representadas sem suposições.</p>
+    <p class="aviso">Pré-análise informativa, gratuita e independente do INSS. Não envie CPF, documentos ou informações de saúde nesta etapa. O escritório avaliará seu caso individualmente.</p>
   </section>
 </main>
