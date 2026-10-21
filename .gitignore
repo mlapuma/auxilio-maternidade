@@ -25,10 +25,13 @@ dist/
 .idea/
 .vscode/
 
-# Vari·veis locais e segredos
+# Vari√°veis locais e segredos
 .env
 .env.*
 !.env.example
 
 # Logs
 *.log
+
+# Exemplo versionado sem segredos
+!.env.production.example
