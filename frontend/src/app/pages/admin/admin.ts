@@ -132,6 +132,7 @@ export class Admin {
 
   consultarTriagens(lead: LeadResumo): void {
     if (!this.autorizacao || this.carregandoTriagens()) return;
+    if (this.leadDetalhado()?.id !== lead.id) this.fecharDetalhes();
     this.leadDetalhado.set(lead);
     this.triagens.set([]);
     this.triagensConsultadas.set(false);
@@ -158,6 +159,7 @@ export class Admin {
 
   consultarHistorico(lead: LeadResumo): void {
     if (!this.autorizacao || this.carregandoHistorico()) return;
+    if (this.leadDetalhado()?.id !== lead.id) this.fecharDetalhes();
     this.leadDetalhado.set(lead);
     this.historico.set([]);
     this.historicoConsultado.set(false);
