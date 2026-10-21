@@ -40,8 +40,9 @@
         </table>
       </div>
       @if (leadDetalhado(); as selecionado) {
-        <section class="detalhes" aria-label="Respostas do questionário">
-          <div class="barra"><h3>Questionário — {{ selecionado.protocolo }}</h3><button type="button" (click)="fecharDetalhes()">Fechar</button></div>
+        <section class="detalhes" [attr.aria-label]="tipoDetalhe() === 'triagens' ? 'Respostas do questionário' : 'Histórico do atendimento'">
+          <div class="barra"><h3>{{ tipoDetalhe() === 'triagens' ? 'Questionário' : 'Histórico' }} — {{ selecionado.nome }} ({{ selecionado.protocolo }})</h3><button type="button" (click)="fecharDetalhes()">Fechar</button></div>
+          @if (tipoDetalhe() === 'triagens') {
           @if (carregandoTriagens()) { <p role="status">Carregando respostas...</p> }
           @for (triagem of triagens(); track triagem.id) {
             <article>
@@ -54,6 +55,8 @@
           } @empty {
             @if (!carregandoTriagens() && triagensConsultadas()) { <p>Não há questionários registrados para este atendimento.</p> }
           }
+          }
+          @if (tipoDetalhe() === 'historico') {
           <div class="historico">
             <h4>Histórico de alterações</h4>
             @if (carregandoHistorico()) { <p role="status">Carregando histórico...</p> }
@@ -63,6 +66,7 @@
               @if (!carregandoHistorico() && historicoConsultado()) { <p>Nenhuma alteração registrada.</p> }
             }
           </div>
+          }
           <p class="aviso">A classificação é apenas preliminar e não substitui avaliação jurídica.</p>
         </section>
       }
