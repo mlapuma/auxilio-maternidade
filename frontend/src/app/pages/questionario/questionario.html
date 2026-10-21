@@ -2,27 +2,27 @@
   <a routerLink="/" class="voltar-home">← Voltar ao início</a>
   <div class="gestante-topo" role="img" aria-label="Ilustração de gestante sorridente"></div>
   <section class="painel" aria-label="Pré-análise de salário-maternidade">
-    @if (!concluido && perguntaAtual) {
+    @if (!concluido && perguntaAtual; as pergunta) {
       <div class="progresso" aria-label="Progresso da pré-análise">
         @for (p of perguntas; track p.id; let i = $index) {
           <span class="ponto" [class.ativo]="i <= etapa()"></span>
         }
       </div>
       <p class="etapa-texto">Etapa {{ etapa() + 1 }} de {{ perguntas.length }}</p>
-      <h1>{{ perguntaAtual.titulo }}</h1>
+      <h1>{{ pergunta.titulo }}</h1>
       <fieldset>
         <legend>Selecione uma opção</legend>
-        @for (opcao of perguntaAtual.opcoes; track opcao) {
+        @for (opcao of pergunta.opcoes; track opcao) {
           <label class="opcao">
-            <input type="radio" [name]="'pergunta-' + perguntaAtual.id" [value]="opcao" [(ngModel)]="respostas[perguntaAtual.id]" />
+            <input type="radio" [name]="'pergunta-' + pergunta.id" [value]="opcao" [(ngModel)]="respostas[pergunta.id]" />
             <span>{{ opcao }}</span>
           </label>
         }
       </fieldset>
-      @if (perguntaAtual.dica) { <p class="dica">ⓘ {{ perguntaAtual.dica }}</p> }
+      @if (pergunta.dica) { <p class="dica">ⓘ {{ pergunta.dica }}</p> }
       <div class="acoes">
         <button type="button" (click)="voltar()" [disabled]="etapa() === 0">Voltar</button>
-        <button type="button" class="principal" (click)="avancar()" [disabled]="!respostas[perguntaAtual.id]">Continuar →</button>
+        <button type="button" class="principal" (click)="avancar()" [disabled]="!respostas[pergunta.id]">Continuar →</button>
       </div>
     } @else {
       <div class="conclusao">✓</div>
