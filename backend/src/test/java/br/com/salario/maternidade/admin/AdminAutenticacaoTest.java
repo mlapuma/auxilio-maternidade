@@ -32,6 +32,8 @@ class AdminAutenticacaoTest {
 
     @Test
     void aceitaCredenciaisValidasComBcrypt() throws Exception {
+        when(repository.findAll(any(org.springframework.data.domain.Pageable.class)))
+            .thenReturn(org.springframework.data.domain.Page.empty());
         mvc.perform(get("/api/admin/leads")
                 .with(httpBasic("escritorio", "senha-de-teste")))
             .andExpect(status().isOk());
