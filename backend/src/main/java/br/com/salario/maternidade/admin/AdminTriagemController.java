@@ -28,11 +28,11 @@ public class AdminTriagemController {
         return triagens.findByLeadIdOrderByCriadoEmDesc(leadId).stream()
             .map(t -> new TriagemDetalhe(t.getId(), t.getClassificacao(),
                 t.isHouveNascimentoOuAdocao(), t.isPossuiVinculoOuContribuicao(),
-                t.isDesejaAtendimento(), t.getCriadoEm()))
+                t.isDesejaAtendimento(), t.getCriadoEm(), t.getRespostasDetalhadas()))
             .toList();
     }
 
     public record TriagemDetalhe(UUID id, String classificacao,
         boolean houveNascimentoOuAdocao, boolean possuiVinculoOuContribuicao,
-        boolean desejaAtendimento, OffsetDateTime criadoEm) {}
+        boolean desejaAtendimento, OffsetDateTime criadoEm, String respostasDetalhadas) {}
 }

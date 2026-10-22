@@ -19,11 +19,17 @@ public class Triagem {
     private boolean desejaAtendimento;
     @Column(nullable = false, length = 40)
     private String classificacao;
+    @Column(name = "respostas_detalhadas", columnDefinition = "TEXT")
+    private String respostasDetalhadas;
     @Column(name = "criado_em", nullable = false)
     private OffsetDateTime criadoEm;
 
     protected Triagem() {}
     public Triagem(UUID leadId, TriagemRequest request, String classificacao) {
+        this(leadId, request, classificacao, null);
+    }
+    public Triagem(UUID leadId, TriagemRequest request, String classificacao, String respostasDetalhadas) {
+        this.respostasDetalhadas = respostasDetalhadas;
         this.id = UUID.randomUUID();
         this.leadId = leadId;
         this.houveNascimentoOuAdocao = request.houveNascimentoOuAdocao();
@@ -32,6 +38,7 @@ public class Triagem {
         this.classificacao = classificacao;
         this.criadoEm = OffsetDateTime.now(java.time.ZoneOffset.UTC);
     }
+    public String getRespostasDetalhadas() { return respostasDetalhadas; }
     public UUID getId() { return id; }
     public String getClassificacao() { return classificacao; }
     public boolean isHouveNascimentoOuAdocao() { return houveNascimentoOuAdocao; }

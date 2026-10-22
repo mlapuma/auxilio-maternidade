@@ -6,6 +6,7 @@ export interface RespostasTriagem {
   houveNascimentoOuAdocao: boolean;
   possuiVinculoOuContribuicao: boolean;
   desejaAtendimento: boolean;
+  respostasDetalhadas: Record<string, string>;
 }
 
 interface Pergunta {
@@ -57,13 +58,13 @@ export class Questionario {
     const inss = this.respostas['inss'];
     const trabalho = this.respostas['trabalho'];
     const temVinculo = inss === 'Tenho vínculo ou contribuo atualmente' || inss === 'Já trabalhei ou contribuí anteriormente' || trabalho.startsWith('Sim,');
-    const certezaVinculo = temVinculo;
     const houveEvento = situacao === 'Meu bebê já nasceu' || (situacao === 'Adoção ou guarda para adoção' && this.respostas['adocao'] === 'Sim');
-    const respostasTriagem: RespostasTriagem | null = certezaVinculo ? {
+    const respostasTriagem: RespostasTriagem = {
       houveNascimentoOuAdocao: houveEvento,
-      possuiVinculoOuContribuicao: true,
+      possuiVinculoOuContribuicao: temVinculo,
       desejaAtendimento: this.respostas['atendimento'] === 'Sim, quero orientação',
-    } : null;
+      respostasDetalhadas: Object.fromEntries(this.perguntas.map(p => [p.titulo, this.respostas[p.id]])),
+    };
     // Não converter incerteza previdenciária em negativa automática.
     this.router.navigate(['/contato'], { state: { respostasTriagem } });
   }
