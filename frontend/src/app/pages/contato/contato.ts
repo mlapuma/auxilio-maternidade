@@ -55,7 +55,12 @@ export class Contato {
         if (!this.respostasTriagem) return of({ lead, triagemSalva: false, naoAplicavel: true });
         return this.http.post('/api/triagens', {
           leadId: lead.id,
-          respostas: this.respostasTriagem,
+          respostas: {
+            houveNascimentoOuAdocao: this.respostasTriagem.houveNascimentoOuAdocao,
+            possuiVinculoOuContribuicao: this.respostasTriagem.possuiVinculoOuContribuicao,
+            desejaAtendimento: this.respostasTriagem.desejaAtendimento,
+          },
+          respostasDetalhadas: this.respostasTriagem.respostasDetalhadas,
         }).pipe(
           map(() => ({ lead, triagemSalva: true, naoAplicavel: false })),
           catchError(() => of({ lead, triagemSalva: false, naoAplicavel: false })),
