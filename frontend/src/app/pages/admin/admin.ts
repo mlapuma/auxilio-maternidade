@@ -132,7 +132,7 @@ export class Admin {
   }
 
   consultarTriagens(lead: LeadResumo): void {
-    if (!this.autorizacao || this.carregandoTriagens()) return;
+    if (!this.autorizacao || (this.carregandoTriagens() && this.leadDetalhado()?.id === lead.id && this.tipoDetalhe() === 'triagens')) return;
     if (this.leadDetalhado()?.id !== lead.id) this.fecharDetalhes();
     this.leadDetalhado.set(lead);
     this.tipoDetalhe.set('triagens');
@@ -161,7 +161,7 @@ export class Admin {
   }
 
   consultarHistorico(lead: LeadResumo): void {
-    if (!this.autorizacao || this.carregandoHistorico()) return;
+    if (!this.autorizacao || (this.carregandoHistorico() && this.leadDetalhado()?.id === lead.id && this.tipoDetalhe() === 'historico')) return;
     if (this.leadDetalhado()?.id !== lead.id) this.fecharDetalhes();
     this.leadDetalhado.set(lead);
     this.tipoDetalhe.set('historico');
