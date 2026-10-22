@@ -48,6 +48,14 @@
             <article>
               <p><strong>Data:</strong> {{ triagem.criadoEm | date:'dd/MM/yyyy HH:mm' }}</p>
               <p><strong>Classificação preliminar:</strong> {{ triagem.classificacao }}</p>
+              @if (respostasCompletas(triagem).length) {
+                <h4>Respostas completas do questionário</h4>
+                @for (item of respostasCompletas(triagem); track item.pergunta) {
+                  <p><strong>{{ item.pergunta }}</strong><br>{{ item.resposta }}</p>
+                }
+              } @else {
+                <p class="aviso">Este cadastro não possui respostas detalhadas armazenadas.</p>
+              }
               <p><strong>Nascimento ou adoção:</strong> {{ triagem.houveNascimentoOuAdocao ? 'Sim' : 'Não' }}</p>
               <p><strong>Vínculo ou contribuição:</strong> {{ triagem.possuiVinculoOuContribuicao ? 'Sim' : 'Não' }}</p>
               <p><strong>Deseja atendimento:</strong> {{ triagem.desejaAtendimento ? 'Sim' : 'Não' }}</p>
