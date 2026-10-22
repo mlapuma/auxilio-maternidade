@@ -15,6 +15,7 @@ interface LeadResumo {
   criadoEm: string;
 }
 interface TriagemDetalhe {
+  respostasDetalhadas: string | null;
   id: string;
   classificacao: string;
   houveNascimentoOuAdocao: boolean;
@@ -213,6 +214,16 @@ export class Admin {
     this.filtro.set(valor);
     this.fecharDetalhes();
     this.carregar(0);
+  }
+
+  respostasCompletas(triagem: TriagemDetalhe): { pergunta: string; resposta: string }[] {
+    if (!triagem.respostasDetalhadas) return [];
+    try {
+      const dados: unknown = JSON.parse(triagem.respostasDetalhadas);
+      if (!dados || typeof dados !== 'object' || Array.isArray(dados)) return [];
+      return Object.entries(dados).filter((item): item is [string, string] => typeof item[1] === 'string')
+        .map(([pergunta, resposta]) => ({ pergunta, resposta }));
+    } catch { return []; }
   }
 
   get registrosFiltrados(): LeadResumo[] {
