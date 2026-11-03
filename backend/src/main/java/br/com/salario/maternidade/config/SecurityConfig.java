@@ -25,7 +25,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // API stateless; revisar se adicionar cookies/sessões.
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/health", "/api/whatsapp/webhook").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/whatsapp/webhook").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/leads", "/api/triagens", "/api/triagem", "/api/atendimentos").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().denyAll())
