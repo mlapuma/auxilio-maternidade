@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { finalize, switchMap, catchError, of, map } from 'rxjs';
 import type { RespostasTriagem } from '../questionario/questionario';
 
+interface AtendimentoResponse { id: string; codigoPublico: string; status: string; whatsappUrl: string | null; }
 interface LeadResponse { id: string; protocolo: string; status: string; criadoEm: string; }
 
 @Component({
@@ -21,6 +22,7 @@ export class Contato {
   readonly protocolo = signal('');
   readonly erro = signal('');
   readonly aviso = signal('');
+  readonly whatsappUrl = signal<string | null>(null);
   nome = '';
   email = '';
   telefone = '';
@@ -42,12 +44,16 @@ export class Contato {
     if (form.invalid || !this.consentimento || this.enviando()) return;
     this.erro.set('');
     this.aviso.set('');
+    this.whatsappUrl.set(null);
     this.enviando.set(true);
     this.http.post<LeadResponse>('/api/leads', {
       nome: this.nome.trim(),
       email: this.email.trim(),
       telefone: this.telefone.replace(/\D/g, ''),
       origem: 'SITE',
+      utmSource: new URLSearchParams(window.location.search).get('utm_source')?.slice(0, 120) ?? null,
+      utmMedium: new URLSearchParams(window.location.search).get('utm_medium')?.slice(0, 120) ?? null,
+      utmCampaign: new URLSearchParams(window.location.search).get('utm_campaign')?.slice(0, 160) ?? null,
       avisoPrivacidadeVersao: 'v1',
       consentimentoContato: this.consentimento,
     }).pipe(
@@ -72,6 +78,12 @@ export class Contato {
         this.protocolo.set(lead.protocolo);
         if (!triagemSalva && !naoAplicavel) this.aviso.set('Contato registrado, mas as respostas do questionário não foram salvas. Informe seu protocolo à equipe.');
         if (naoAplicavel) this.aviso.set('A equipe fará a avaliação individual das informações.');
+        if (triagemSalva) {
+          this.http.post<AtendimentoResponse>('/api/atendimentos', { leadId: lead.id }).subscribe({
+            next: atendimento => this.whatsappUrl.set(atendimento.whatsappUrl),
+            error: () => this.aviso.set('Contato registrado. A continuação pelo WhatsApp está temporariamente indisponível.'),
+          });
+        }
         form.resetForm();
       },
       error: (error: HttpErrorResponse) => {
