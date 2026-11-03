@@ -25,11 +25,15 @@ public class WhatsAppWebhookService {
         if (!"whatsapp_business_account".equals(root.path("object").asText())) {
             throw new IllegalArgumentException("Unexpected webhook object");
         }
+        if (!root.path("entry").isArray()) {
+            throw new IllegalArgumentException("Missing webhook entries");
+        }
         for (JsonNode entry : root.path("entry")) {
             for (JsonNode change : entry.path("changes")) {
                 JsonNode value = change.path("value");
                 for (JsonNode message : value.path("messages")) {
-                    saveEvent(message.path("id").asText(), "MENSAGEM");
+                    String id = message.path("id").asText();
+                    if (!id.isBlank()) saveEvent(id, "MENSAGEM");
                 }
                 for (JsonNode status : value.path("statuses")) {
                     String id = status.path("id").asText();
