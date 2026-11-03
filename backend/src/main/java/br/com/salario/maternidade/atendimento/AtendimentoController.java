@@ -7,6 +7,9 @@ import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class AtendimentoController {
     private final AtendimentoRepository atendimentos;
     private final LeadRepository leads;
+    @Value("${WHATSAPP_PUBLIC_NUMBER:}") private String whatsappPublicNumber;
 
     public AtendimentoController(AtendimentoRepository atendimentos, LeadRepository leads) {
         this.atendimentos = atendimentos;
@@ -22,10 +26,13 @@ public class AtendimentoController {
     }
 
     public record CriarAtendimentoRequest(@NotNull UUID leadId) {}
-    public record AtendimentoResponse(UUID id, String codigoPublico, String status) {
-        static AtendimentoResponse from(Atendimento atendimento) {
-            return new AtendimentoResponse(atendimento.getId(), atendimento.getCodigoPublico(), atendimento.getStatus());
-        }
+    public record AtendimentoResponse(UUID id, String codigoPublico, String status, String whatsappUrl) {}
+    private AtendimentoResponse response(Atendimento atendimento) {
+        String number = whatsappPublicNumber.replaceAll("[^0-9]", "");
+        String url = number.matches("[1-9][0-9]{9,14}")
+            ? "https://wa.me/" + number + "?text=" + URLEncoder.encode("Codigo " + atendimento.getCodigoPublico(), StandardCharsets.UTF_8)
+            : null;
+        return new AtendimentoResponse(atendimento.getId(), atendimento.getCodigoPublico(), atendimento.getStatus(), url);
     }
 
     @PostMapping
@@ -39,6 +46,6 @@ public class AtendimentoController {
         Atendimento atendimento = atendimentos.findByLeadId(lead.getId()).orElseGet(() ->
             atendimentos.save(new Atendimento(lead.getId(), lead.getProtocolo())));
         return ResponseEntity.created(URI.create("/api/atendimentos/" + atendimento.getId()))
-            .body(AtendimentoResponse.from(atendimento));
+            .body(response(atendimento));
     }
 }
