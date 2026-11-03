@@ -3,17 +3,20 @@ package br.com.salario.maternidade.whatsapp;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.UUID;
+import org.springframework.jdbc.core.JdbcTemplate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WhatsAppWebhookService {
     private final ObjectMapper mapper;
-    private final EventoWebhookRepository repository;
+    private final JdbcTemplate jdbc;
 
-    public WhatsAppWebhookService(ObjectMapper mapper, EventoWebhookRepository repository) {
+    public WhatsAppWebhookService(ObjectMapper mapper, JdbcTemplate jdbc) {
         this.mapper = mapper;
-        this.repository = repository;
+        this.jdbc = jdbc;
     }
 
     @Transactional
@@ -39,12 +42,8 @@ public class WhatsAppWebhookService {
 
     private void saveEvent(String externalId, String type) {
         if (externalId.isBlank() || externalId.length() > 255) return;
-        if (!repository.existsByIdentificadorExterno(externalId)) {
-            try {
-                repository.saveAndFlush(new EventoWebhook(externalId, type));
-            } catch (org.springframework.dao.DataIntegrityViolationException duplicate) {
-                // Concurrent delivery already persisted this event.
-            }
-        }
+        jdbc.update("INSERT INTO eventos_webhook (id, identificador_externo, tipo_evento, data_recebimento, status_processamento) " +
+            "VALUES (?, ?, ?, ?, ?) ON CONFLICT (identificador_externo) DO NOTHING",
+            UUID.randomUUID(), externalId, type, OffsetDateTime.now(ZoneOffset.UTC), "RECEBIDO");
     }
 }
