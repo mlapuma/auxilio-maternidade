@@ -26,7 +26,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/leads", "/api/triagens", "/api/triagem").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/leads", "/api/triagens", "/api/triagem", "/api/atendimentos").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().denyAll())
             .httpBasic(Customizer.withDefaults())
