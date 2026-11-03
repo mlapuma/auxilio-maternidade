@@ -23,6 +23,7 @@ public class LeadController {
             request.email() == null ? null : request.email().trim(),
             request.origem() == null ? null : request.origem().trim(),
             request.avisoPrivacidadeVersao(), request.consentimentoContato(), OffsetDateTime.now(ZoneOffset.UTC));
+        lead.definirCampanha(request.utmSource(), request.utmMedium(), request.utmCampaign());
         repository.save(lead);
         return ResponseEntity.created(URI.create("/api/leads/" + id)).body(LeadResponse.from(lead));
     }
