@@ -2,3 +2,14 @@
 .detalhes{margin:28px 0;padding:20px;border:1px solid #d3e3e9;border-radius:12px;background:#f8fbfd}.detalhes article{padding:12px 0;border-top:1px solid #d3e3e9}.detalhes p{line-height:1.5}
 
 .tabela-scroll tbody tr.linha-selecionada{background:#eef8f9}.tabela-scroll button.ativo{background:#0b7285;color:#fff;border-color:#0b7285}
+
+.whatsapp-painel{margin:0 0 32px;padding:22px;border:1px solid #d3e3e9;border-radius:14px;background:#f8fbfd}
+.whatsapp-painel .barra{flex-wrap:wrap}
+.whatsapp-painel h2{margin:0 0 6px}
+.whatsapp-painel p{line-height:1.5}
+.whatsapp-indicadores{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:18px 0}
+.whatsapp-indicadores article{display:flex;flex-direction:column;gap:12px;background:white;border:1px solid #d3e3e9;border-radius:12px;padding:18px}
+.whatsapp-indicadores span{font-size:.92rem;color:#526576}
+.whatsapp-indicadores strong{font-size:2rem;color:#173249}
+.whatsapp-indicadores .revisao{border-color:#d5a248;background:#fff9ed}
+.whatsapp-indicadores .revisao strong{color:#885a0a}

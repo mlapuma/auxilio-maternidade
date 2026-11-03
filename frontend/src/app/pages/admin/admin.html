@@ -21,6 +21,31 @@
     </section>
   } @else {
     <section class="conteudo">
+      <section class="whatsapp-painel" aria-label="Monitoramento de mensagens WhatsApp">
+        <div class="barra">
+          <div>
+            <h2>Mensagens WhatsApp</h2>
+            <p>Indicadores da fila de respostas automáticas.</p>
+          </div>
+          <button type="button" (click)="carregarMetricasWhatsApp()"
+            [disabled]="whatsappCarregando()">
+            {{ whatsappCarregando() ? 'Atualizando...' : 'Atualizar indicadores' }}
+          </button>
+        </div>
+        @if (whatsappCarregando()) { <p role="status">Consultando fila...</p> }
+        @if (whatsappErro()) { <p role="alert" class="erro">{{ whatsappErro() }}</p> }
+        @if (whatsappMetricas(); as m) {
+          <div class="whatsapp-indicadores">
+            <article><span>Pendentes</span><strong>{{ m.pending }}</strong></article>
+            <article><span>Em processamento</span><strong>{{ m.sending }}</strong></article>
+            <article><span>Requisições aceitas</span><strong>{{ m.sent }}</strong></article>
+            <article class="revisao"><span>Precisam de revisão</span><strong>{{ m.review }}</strong></article>
+          </div>
+          <p class="aviso">Requisições aceitas não significam mensagens entregues. Consulte os status da Meta para confirmar a entrega.</p>
+        } @else if (!whatsappCarregando() && !whatsappErro()) {
+          <p class="aviso">Nenhum indicador carregado.</p>
+        }
+      </section>
       <div class="barra"><h2>Atendimentos</h2><button type="button" (click)="sair()">Sair</button></div>
       <p>Total de cadastros: <strong>{{ pagina()?.totalElements ?? 0 }}</strong></p>
       <div class="filtros" aria-label="Filtrar atendimentos">

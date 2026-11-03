@@ -5,6 +5,13 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
+interface WhatsAppOutboxCounts {
+  pending: number;
+  sending: number;
+  sent: number;
+  review: number;
+}
+
 interface LeadResumo {
   id: string;
   protocolo: string;
@@ -46,6 +53,9 @@ interface PaginaLeads {
 export class Admin {
   private readonly http = inject(HttpClient);
   readonly autenticado = signal(false);
+  readonly whatsappMetricas = signal<WhatsAppOutboxCounts | null>(null);
+  readonly whatsappCarregando = signal(false);
+  readonly whatsappErro = signal('');
   readonly carregando = signal(false);
   readonly salvandoId = signal<string | null>(null);
   readonly leadDetalhado = signal<LeadResumo | null>(null);
@@ -93,6 +103,7 @@ export class Admin {
       next: resultado => {
         this.pagina.set(resultado);
         this.autenticado.set(true);
+        if (!this.whatsappMetricas() && !this.whatsappCarregando()) this.carregarMetricasWhatsApp();
       },
       error: (err: HttpErrorResponse) => {
         if (err.status === 401 || err.status === 403) {
@@ -100,6 +111,28 @@ export class Admin {
           this.erro.set('Credenciais inválidas ou acesso não autorizado.');
         } else {
           this.erro.set('Não foi possível consultar os atendimentos. Verifique a conexão com o servidor.');
+        }
+      },
+    });
+  }
+
+  carregarMetricasWhatsApp(): void {
+    if (!this.autorizacao || this.whatsappCarregando()) return;
+    this.whatsappCarregando.set(true);
+    this.whatsappErro.set('');
+    this.http.get<WhatsAppOutboxCounts>('/api/admin/whatsapp/outbox/metrics', {
+      headers: new HttpHeaders({ Authorization: this.autorizacao }),
+    }).pipe(finalize(() => this.whatsappCarregando.set(false))).subscribe({
+      next: counts => {
+        if (this.autorizacao) this.whatsappMetricas.set(counts);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.whatsappMetricas.set(null);
+        if (err.status === 401 || err.status === 403) {
+          this.sair();
+          this.erro.set('Sua sessão não está autorizada. Entre novamente.');
+        } else {
+          this.whatsappErro.set('Não foi possível consultar as métricas do WhatsApp.');
         }
       },
     });
@@ -205,6 +238,8 @@ export class Admin {
     this.senha = '';
     this.autenticado.set(false);
     this.pagina.set(null);
+    this.whatsappMetricas.set(null);
+    this.whatsappErro.set('');
     this.fecharDetalhes();
     this.filtro.set('TODOS');
   }
