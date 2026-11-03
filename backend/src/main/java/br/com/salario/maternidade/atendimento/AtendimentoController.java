@@ -2,6 +2,7 @@ package br.com.salario.maternidade.atendimento;
 
 import br.com.salario.maternidade.lead.Lead;
 import br.com.salario.maternidade.lead.LeadRepository;
+import br.com.salario.maternidade.triagem.TriagemRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
@@ -18,11 +19,13 @@ import org.springframework.web.bind.annotation.*;
 public class AtendimentoController {
     private final AtendimentoRepository atendimentos;
     private final LeadRepository leads;
+    private final TriagemRepository triagens;
     @Value("${WHATSAPP_PUBLIC_NUMBER:}") private String whatsappPublicNumber;
 
-    public AtendimentoController(AtendimentoRepository atendimentos, LeadRepository leads) {
+    public AtendimentoController(AtendimentoRepository atendimentos, LeadRepository leads, TriagemRepository triagens) {
         this.atendimentos = atendimentos;
         this.leads = leads;
+        this.triagens = triagens;
     }
 
     public record CriarAtendimentoRequest(@NotNull UUID leadId) {}
@@ -42,7 +45,7 @@ public class AtendimentoController {
         // A verificação de posse do telefone será obrigatória antes de divulgar dados via WhatsApp.
         Lead lead = leads.findById(request.leadId()).orElse(null);
         if (lead == null) return ResponseEntity.notFound().build();
-        if (!lead.isConsentimentoContato()) return ResponseEntity.badRequest().build();
+        if (!lead.isConsentimentoContato() || triagens.findByLeadIdOrderByCriadoEmDesc(lead.getId()).isEmpty()) return ResponseEntity.badRequest().build();
         Atendimento atendimento = atendimentos.findByLeadId(lead.getId()).orElseGet(() ->
             atendimentos.save(new Atendimento(lead.getId(), lead.getProtocolo())));
         return ResponseEntity.created(URI.create("/api/atendimentos/" + atendimento.getId()))
