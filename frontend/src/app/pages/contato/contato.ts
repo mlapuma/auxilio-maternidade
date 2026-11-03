@@ -51,9 +51,9 @@ export class Contato {
       email: this.email.trim(),
       telefone: this.telefone.replace(/\D/g, ''),
       origem: 'SITE',
-      utmSource: new URLSearchParams(window.location.search).get('utm_source')?.slice(0, 120) ?? null,
-      utmMedium: new URLSearchParams(window.location.search).get('utm_medium')?.slice(0, 120) ?? null,
-      utmCampaign: new URLSearchParams(window.location.search).get('utm_campaign')?.slice(0, 160) ?? null,
+      utmSource: (history.state?.utm?.['utm_source'] ?? sessionStorage.getItem('utm_source'))?.slice(0, 120) ?? null,
+      utmMedium: (history.state?.utm?.['utm_medium'] ?? sessionStorage.getItem('utm_medium'))?.slice(0, 120) ?? null,
+      utmCampaign: (history.state?.utm?.['utm_campaign'] ?? sessionStorage.getItem('utm_campaign'))?.slice(0, 160) ?? null,
       avisoPrivacidadeVersao: 'v1',
       consentimentoContato: this.consentimento,
     }).pipe(
