@@ -16,22 +16,32 @@ public class WhatsAppWebhookService {
     private final JdbcTemplate jdbc;
     private final WhatsAppInboundMessageParser inboundParser;
     private final WhatsAppConversationProcessor conversationProcessor;
+    private final WhatsAppReplyOutbox replyOutbox;
 
     public WhatsAppWebhookService(ObjectMapper mapper, JdbcTemplate jdbc) {
         this.mapper = mapper;
         this.jdbc = jdbc;
         this.inboundParser = null;
         this.conversationProcessor = null;
+        this.replyOutbox = null;
+    }
+
+    public WhatsAppWebhookService(ObjectMapper mapper, JdbcTemplate jdbc,
+            WhatsAppInboundMessageParser inboundParser,
+            WhatsAppConversationProcessor conversationProcessor) {
+        this(mapper, jdbc, inboundParser, conversationProcessor, null);
     }
 
     @Autowired
     public WhatsAppWebhookService(ObjectMapper mapper, JdbcTemplate jdbc,
             WhatsAppInboundMessageParser inboundParser,
-            WhatsAppConversationProcessor conversationProcessor) {
+            WhatsAppConversationProcessor conversationProcessor,
+            WhatsAppReplyOutbox replyOutbox) {
         this.mapper = mapper;
         this.jdbc = jdbc;
         this.inboundParser = inboundParser;
         this.conversationProcessor = conversationProcessor;
+        this.replyOutbox = replyOutbox;
     }
 
     @Transactional
@@ -62,7 +72,10 @@ public class WhatsAppWebhookService {
             for (WhatsAppInboundMessage message : inboundParser.parse(payload)) {
                 // Only newly inserted webhook events can advance conversation state.
                 if (insertedMessageIds.contains(message.messageId())) {
-                    conversationProcessor.process(message);
+                    var transition = conversationProcessor.process(message);
+                    if (replyOutbox != null) {
+                        replyOutbox.enqueue(message.messageId(), message.sender(), transition.reply());
+                    }
                 }
             }
         }
