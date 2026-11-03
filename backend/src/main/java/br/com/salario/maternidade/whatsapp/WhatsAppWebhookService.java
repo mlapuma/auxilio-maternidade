@@ -26,6 +26,12 @@ public class WhatsAppWebhookService {
         this.replyOutbox = null;
     }
 
+    public WhatsAppWebhookService(ObjectMapper mapper, JdbcTemplate jdbc,
+            WhatsAppInboundMessageParser inboundParser,
+            WhatsAppConversationProcessor conversationProcessor) {
+        this(mapper, jdbc, inboundParser, conversationProcessor, null);
+    }
+
     @Autowired
     public WhatsAppWebhookService(ObjectMapper mapper, JdbcTemplate jdbc,
             WhatsAppInboundMessageParser inboundParser,
