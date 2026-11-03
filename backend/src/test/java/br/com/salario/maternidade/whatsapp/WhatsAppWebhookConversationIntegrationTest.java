@@ -19,7 +19,7 @@ class WhatsAppWebhookConversationIntegrationTest {
         WhatsAppConversationProcessor processor = mock(WhatsAppConversationProcessor.class);
         var service = new WhatsAppWebhookService(new ObjectMapper(), jdbc,
             new WhatsAppInboundMessageParser(new ObjectMapper()), processor);
-        when(jdbc.update(anyString(), any(Object[].class))).thenReturn(1);
+        when(jdbc.update(anyString(), any(), any(), any(), any(), any())).thenReturn(1);
         service.accept(PAYLOAD);
         verify(processor).process(new WhatsAppInboundMessage("wamid.123", "5511999999999", "Oi"));
     }
