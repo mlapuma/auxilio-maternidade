@@ -120,13 +120,15 @@ export class Admin {
     if (!this.autorizacao || this.whatsappCarregando()) return;
     this.whatsappCarregando.set(true);
     this.whatsappErro.set('');
+    const autorizacaoDaRequisicao = this.autorizacao;
     this.http.get<WhatsAppOutboxCounts>('/api/admin/whatsapp/outbox/metrics', {
       headers: new HttpHeaders({ Authorization: this.autorizacao }),
     }).pipe(finalize(() => this.whatsappCarregando.set(false))).subscribe({
       next: counts => {
-        if (this.autorizacao) this.whatsappMetricas.set(counts);
+        if (this.autorizacao === autorizacaoDaRequisicao) this.whatsappMetricas.set(counts);
       },
       error: (err: HttpErrorResponse) => {
+        if (this.autorizacao !== autorizacaoDaRequisicao) return;
         this.whatsappMetricas.set(null);
         if (err.status === 401 || err.status === 403) {
           this.sair();
