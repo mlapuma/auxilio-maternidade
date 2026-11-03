@@ -66,6 +66,9 @@ export class Questionario {
       respostasDetalhadas: Object.fromEntries(this.perguntas.map(p => [p.titulo, this.respostas[p.id]])),
     };
     // Não converter incerteza previdenciária em negativa automática.
-    this.router.navigate(['/contato'], { state: { respostasTriagem } });
+    const params = new URLSearchParams(window.location.search);
+    const utm = Object.fromEntries(['utm_source', 'utm_medium', 'utm_campaign']
+      .map(key => [key, params.get(key) ?? sessionStorage.getItem(key)]));
+    this.router.navigate(['/contato'], { state: { respostasTriagem, utm } });
   }
 }

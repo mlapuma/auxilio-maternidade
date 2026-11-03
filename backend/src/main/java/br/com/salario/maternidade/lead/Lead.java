@@ -19,6 +19,9 @@ public class Lead {
     private String email;
     @Column(length = 80)
     private String origem;
+    @Column(length = 120) private String utmSource;
+    @Column(length = 120) private String utmMedium;
+    @Column(length = 160) private String utmCampaign;
     @Column(nullable = false, length = 32)
     private String status;
     @Column(name = "aviso_privacidade_versao", nullable = false, length = 20)
@@ -42,6 +45,12 @@ public class Lead {
         this.avisoPrivacidadeVersao = avisoPrivacidadeVersao;
         this.consentimentoContato = consentimentoContato;
         this.criadoEm = criadoEm;
+    }
+    public boolean isConsentimentoContato() { return consentimentoContato; }
+    public void definirCampanha(String source, String medium, String campaign) {
+        this.utmSource = source;
+        this.utmMedium = medium;
+        this.utmCampaign = campaign;
     }
     public UUID getId() { return id; }
     public String getProtocolo() { return protocolo; }
