@@ -125,7 +125,7 @@ public class WhatsAppOutboxDispatchStore {
               JOIN whatsapp_conversations c ON c.telefone = o.telefone
              WHERE o.id = ? AND o.status = 'ENVIADO'
                AND c.consentimento = true AND c.etapa <> 'STOPPED'
-            ON CONFLICT (mensagem_externa_id) DO NOTHING
+            ON CONFLICT (mensagem_externa_id) WHERE mensagem_externa_id IS NOT NULL DO NOTHING
             """, UUID.randomUUID(), id);
     }
 
