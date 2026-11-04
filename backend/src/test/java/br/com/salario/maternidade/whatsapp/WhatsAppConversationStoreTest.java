@@ -44,14 +44,30 @@ class WhatsAppConversationStoreTest {
         verifyNoInteractions(jdbc);
     }
     @Test
-    void linksOnlyOneExistingLeadWithConsent() {
+    void linksBrazilianLeadWithNationalOrInternationalFormatOnlyIfUniqueAndConsenting() {
         store.linkUniqueExistingLead("5511999999999");
         verify(jdbc).update(argThat(sql ->
             sql.contains("c.consentimento = true")
             && sql.contains("c.lead_id IS NULL")
             && sql.contains("count(*)")
-            && sql.contains("regexp_replace")),
-            eq("5511999999999"), eq("5511999999999"), eq("5511999999999"));
+            && sql.contains("regexp_replace")
+            && sql.contains("IN (?, ?)")),
+            eq("5511999999999"), eq("11999999999"), eq("5511999999999"),
+            eq("5511999999999"), eq("11999999999"));
+    }
+
+    @Test
+    void doesNotStripCountryCodeFromOtherCountries() {
+        store.linkUniqueExistingLead("14155552671");
+        verify(jdbc).update(anyString(), eq("14155552671"), eq("14155552671"),
+            eq("14155552671"), eq("14155552671"), eq("14155552671"));
+    }
+
+    @Test
+    void supportsBrazilianLandlineWithAreaCode() {
+        store.linkUniqueExistingLead("551133334444");
+        verify(jdbc).update(anyString(), eq("551133334444"), eq("1133334444"),
+            eq("551133334444"), eq("551133334444"), eq("1133334444"));
     }
 
     @Test
