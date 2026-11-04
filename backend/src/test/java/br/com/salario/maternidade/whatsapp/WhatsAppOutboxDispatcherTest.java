@@ -16,6 +16,8 @@ class WhatsAppOutboxDispatcherTest {
     void noPendingMessagesMeansNoSend() {
         when(store.claimOne()).thenReturn(Optional.empty());
         assertFalse(dispatcher.dispatchOne());
+        verify(store).expireStalePendingReplies();
+        verify(store).flagStuckSendingForReview();
         verifyNoInteractions(client);
     }
 
