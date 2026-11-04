@@ -31,6 +31,12 @@ public class WhatsAppConversationProcessor {
         }
         store.save(new WhatsAppConversationStore.Conversation(
             message.sender(), transition.nextStep(), consent));
+        // A new consent prompt supersedes older, unsent invitations.
+        // The webhook will enqueue only the latest prompt after this transition.
+        if (transition.nextStep() == WhatsAppConversationFlow.Step.CONSENT
+                && current.step() == WhatsAppConversationFlow.Step.CONSENT) {
+            store.cancelPendingConsentRequests(message.sender());
+        }
         if (current.step() == WhatsAppConversationFlow.Step.CONSENT
                 && transition.nextStep() == WhatsAppConversationFlow.Step.BIRTH) {
             store.cancelPendingConsentRequests(message.sender());
