@@ -39,11 +39,13 @@ class WhatsAppOutboxAdminSecurityTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void administratorCanReadMetrics() throws Exception {
-        when(metrics.counts()).thenReturn(new WhatsAppOutboxMetrics.Counts(2, 1, 7, 3));
+        when(metrics.counts()).thenReturn(new WhatsAppOutboxMetrics.Counts(2, 1, 7, 3, 4, 5));
         mvc.perform(get("/api/admin/whatsapp/outbox/metrics"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.pending").value(2))
             .andExpect(jsonPath("$.review").value(3))
+            .andExpect(jsonPath("$.cancelled").value(4))
+            .andExpect(jsonPath("$.expired").value(5))
             .andExpect(jsonPath("$.phone").doesNotExist());
         verify(metrics).counts();
     }
