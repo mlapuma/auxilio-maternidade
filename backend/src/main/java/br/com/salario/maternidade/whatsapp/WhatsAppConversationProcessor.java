@@ -31,6 +31,10 @@ public class WhatsAppConversationProcessor {
         }
         store.save(new WhatsAppConversationStore.Conversation(
             message.sender(), transition.nextStep(), consent));
+        if (current.step() == WhatsAppConversationFlow.Step.CONSENT
+                && transition.nextStep() == WhatsAppConversationFlow.Step.BIRTH) {
+            store.cancelPendingConsentRequests(message.sender());
+        }
         if (transition.nextStep() == WhatsAppConversationFlow.Step.STOPPED
                 || (current.step() == WhatsAppConversationFlow.Step.STOPPED
                     && transition.nextStep() == WhatsAppConversationFlow.Step.CONSENT)) {
