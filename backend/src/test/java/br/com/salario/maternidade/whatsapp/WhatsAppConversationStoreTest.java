@@ -106,6 +106,18 @@ class WhatsAppConversationStoreTest {
     }
 
     @Test
+    void cancelsOnlyObsoletePendingStandardReplies() {
+        store.cancelPendingStandardReplies("5511999999999");
+
+        verify(jdbc).update(org.mockito.ArgumentMatchers.<String>argThat(sql ->
+            sql.contains("status = 'CANCELADO'")
+            && sql.contains("status = 'PENDENTE'")
+            && sql.contains("tipo_resposta = 'STANDARD'")
+            && sql.contains("telefone = ?")),
+            eq("5511999999999"));
+    }
+
+    @Test
     void cancelsOnlyPendingRepliesForPhone() {
         store.cancelPendingReplies("5511999999999");
         verify(jdbc).update(argThat(sql ->
