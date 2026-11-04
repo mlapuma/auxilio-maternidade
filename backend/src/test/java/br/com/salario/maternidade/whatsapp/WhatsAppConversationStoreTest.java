@@ -11,6 +11,23 @@ class WhatsAppConversationStoreTest {
     private final WhatsAppConversationStore store = new WhatsAppConversationStore(jdbc);
 
     @Test
+    void cancelsOnlyPendingConsentRequests() {
+        org.springframework.jdbc.core.JdbcTemplate jdbc =
+            org.mockito.Mockito.mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        var store = new WhatsAppConversationStore(jdbc);
+
+        store.cancelPendingConsentRequests("5511999999999");
+
+        org.mockito.Mockito.verify(jdbc).update(
+            org.mockito.ArgumentMatchers.<String>argThat(sql ->
+                sql.contains("status = 'CANCELADO'")
+                && sql.contains("status = 'PENDENTE'")
+                && sql.contains("tipo_resposta = 'CONSENT_REQUEST'")
+                && sql.contains("telefone = ?")),
+            org.mockito.ArgumentMatchers.eq("5511999999999"));
+    }
+
+    @Test
     void savesStateWithoutMessageBody() {
         store.save(new WhatsAppConversationStore.Conversation(
             "5511999999999", WhatsAppConversationFlow.Step.CONSENT, false));
