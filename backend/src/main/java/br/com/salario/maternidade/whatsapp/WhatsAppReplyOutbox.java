@@ -13,6 +13,11 @@ public class WhatsAppReplyOutbox {
     }
 
     public void enqueue(String inboundMessageId, String phone, String reply) {
+        enqueue(inboundMessageId, phone, reply, false);
+    }
+
+    public void enqueue(String inboundMessageId, String phone, String reply,
+            boolean consentRequest) {
         if (inboundMessageId == null || inboundMessageId.isBlank() || inboundMessageId.length() > 255) {
             throw new IllegalArgumentException("Invalid inbound message id");
         }
@@ -24,9 +29,10 @@ public class WhatsAppReplyOutbox {
         }
         jdbc.update("""
             INSERT INTO whatsapp_outbox
-                (id, mensagem_entrada_id, telefone, corpo, status)
-            VALUES (?, ?, ?, ?, 'PENDENTE')
+                (id, mensagem_entrada_id, telefone, corpo, status, tipo_resposta)
+            VALUES (?, ?, ?, ?, 'PENDENTE', ?)
             ON CONFLICT (mensagem_entrada_id) DO NOTHING
-            """, UUID.randomUUID(), inboundMessageId, phone, reply);
+            """, UUID.randomUUID(), inboundMessageId, phone, reply,
+            consentRequest ? "CONSENT_REQUEST" : "STANDARD");
     }
 }
