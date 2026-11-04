@@ -72,6 +72,35 @@ public class WhatsAppOutboxDispatchStore {
                 : Optional.empty());
     }
 
+    /**
+     * Recheck the conversation just before the external API call.
+     * A user may revoke consent after the message was claimed.
+     * This narrows the race window; it cannot make the network send atomic.
+     */
+    public boolean stillEligible(UUID id) {
+        Boolean eligible = jdbc.queryForObject("""
+            SELECT EXISTS (
+                SELECT 1 FROM whatsapp_outbox o
+                JOIN whatsapp_conversations c ON c.telefone = o.telefone
+                WHERE o.id = ? AND o.status = 'ENVIANDO'
+                  AND o.criado_em >= CURRENT_TIMESTAMP - INTERVAL '23 hours'
+                  AND ((o.tipo_resposta = 'STANDARD'
+                        AND c.consentimento = true AND c.etapa <> 'STOPPED')
+                    OR (o.tipo_resposta = 'CONSENT_REQUEST'
+                        AND c.consentimento = false AND c.etapa = 'CONSENT'))
+            )
+            """, Boolean.class, id);
+        return Boolean.TRUE.equals(eligible);
+    }
+
+    public void cancelClaimedReply(UUID id) {
+        jdbc.update("""
+            UPDATE whatsapp_outbox
+               SET status = 'CANCELADO', atualizado_em = CURRENT_TIMESTAMP
+             WHERE id = ? AND status = 'ENVIANDO'
+            """, id);
+    }
+
     @Transactional
     public void markSent(UUID id) {
         jdbc.update("""
