@@ -41,4 +41,10 @@ class WhatsAppConversationFlowTest {
             assertEquals(STOPPED, flow.next(step, "SAIR").nextStep());
         }
     }
+    @Test
+    void stoppedConversationRequiresExplicitRestart() {
+        assertEquals(STOPPED, flow.next(STOPPED, "oi").nextStep());
+        assertEquals(CONSENT, flow.next(STOPPED, "INICIAR").nextStep());
+        assertEquals(CONSENT, flow.next(STOPPED, "recomeçar").nextStep());
+    }
 }
