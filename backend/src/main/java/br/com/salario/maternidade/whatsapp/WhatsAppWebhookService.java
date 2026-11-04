@@ -87,7 +87,10 @@ public class WhatsAppWebhookService {
                     if (historyStore != null) {
                         historyStore.recordInbound(message);
                     }
-                    if (replyOutbox != null) {
+                    // Do not queue acknowledgements after opt-out/refusal: the
+                    // dispatcher correctly forbids sending in STOPPED state.
+                    if (replyOutbox != null
+                            && transition.nextStep() != WhatsAppConversationFlow.Step.STOPPED) {
                         if (transition.nextStep() == WhatsAppConversationFlow.Step.CONSENT) {
                             replyOutbox.enqueue(message.messageId(), message.sender(), transition.reply(), true);
                         } else {
