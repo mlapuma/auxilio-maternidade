@@ -23,7 +23,7 @@ class WhatsAppReplyOutboxTest {
               "messages":[{"id":"wamid.123","from":"5511999999999","type":"text",
               "text":{"body":"Oi"}}]}}]}]}
             """);
-        verify(outbox).enqueue("wamid.123", "5511999999999", "Responda SIM ou NÃO");
+        verify(outbox).enqueue("wamid.123", "5511999999999", "Responda SIM ou NÃO", true);
     }
 
     @Test
