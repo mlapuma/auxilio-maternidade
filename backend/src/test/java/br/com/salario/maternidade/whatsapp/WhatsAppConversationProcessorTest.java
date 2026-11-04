@@ -65,4 +65,19 @@ class WhatsAppConversationProcessorTest {
         verify(store).clearScreeningAnswers(PHONE);
         verify(store, never()).deleteByPhone(anyString());
     }
+    @Test
+    void linksExistingLeadOnlyAfterConsent() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.CONSENT, false)));
+        processor.process(new WhatsAppInboundMessage("wamid.8", PHONE, "sim"));
+        verify(store).linkUniqueExistingLead(PHONE);
+    }
+
+    @Test
+    void doesNotLinkLeadWhenConsentRefused() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.CONSENT, false)));
+        processor.process(new WhatsAppInboundMessage("wamid.9", PHONE, "não"));
+        verify(store, never()).linkUniqueExistingLead(anyString());
+    }
 }
