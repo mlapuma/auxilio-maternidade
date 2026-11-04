@@ -67,7 +67,7 @@ public class WhatsAppOutboxDispatchStore {
                     OR (o.tipo_resposta = 'CONSENT_REQUEST'
                         AND c.consentimento = false AND c.etapa = 'CONSENT'))
                 ORDER BY o.criado_em, o.id
-                FOR UPDATE OF o SKIP LOCKED
+                FOR UPDATE OF o, c SKIP LOCKED
                 LIMIT 1
             )
             RETURNING id, telefone, corpo
