@@ -12,7 +12,7 @@ function Probe([string]$name, [string]$base, [string]$method, [string]$path, [st
     $headers = @{}
     if ($signature) { $headers["X-Hub-Signature-256"] = $signature }
     try {
-        $params = @{ Uri = $url; Method = $method; Headers = $headers; TimeoutSec = 15; SkipHttpErrorCheck = $true }
+        $params = @{ Uri = $url; Method = $method; Headers = $headers; TimeoutSec = 15; UseBasicParsing = $true }
         if ($method -eq "POST") {
             $params.Body = $body
             $params.ContentType = "application/json"
@@ -21,7 +21,12 @@ function Probe([string]$name, [string]$base, [string]$method, [string]$path, [st
         $status = [int]$response.StatusCode
         $result = [pscustomobject]@{ Check = $name; Status = $status; Detail = "HTTP response" }
     } catch {
-        $result = [pscustomobject]@{ Check = $name; Status = "-"; Detail = $_.Exception.Message }
+        $httpResponse = $_.Exception.Response
+        if ($null -ne $httpResponse -and $null -ne $httpResponse.StatusCode) {
+            $result = [pscustomobject]@{ Check = $name; Status = [int]$httpResponse.StatusCode; Detail = "HTTP response (non-2xx)" }
+        } else {
+            $result = [pscustomobject]@{ Check = $name; Status = "-"; Detail = $_.Exception.Message }
+        }
     }
     $results.Add($result)
     return $result
