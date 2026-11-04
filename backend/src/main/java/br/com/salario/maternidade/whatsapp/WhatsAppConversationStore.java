@@ -85,7 +85,7 @@ public class WhatsAppConversationStore {
     }
 
     /**
-     * Associates only a uniquely matching, consenting existing lead.
+     * Associates only a uniquely matching existing lead that also consented to contact.
      * Brazilian leads may store a national number (DDD + subscriber) while
      * WhatsApp supplies country code 55. Never use suffix-only matching.
      */
@@ -98,13 +98,15 @@ public class WhatsAppConversationStore {
                SET lead_id = (
                    SELECT l.id FROM leads l
                     WHERE regexp_replace(l.telefone, '[^0-9]', '', 'g') IN (?, ?)
+                      AND l.consentimento_contato = true
                ),
                    atualizado_em = CURRENT_TIMESTAMP
              WHERE c.telefone = ?
                AND c.consentimento = true
                AND c.lead_id IS NULL
                AND (SELECT count(*) FROM leads l
-                    WHERE regexp_replace(l.telefone, '[^0-9]', '', 'g') IN (?, ?)) = 1
+                    WHERE regexp_replace(l.telefone, '[^0-9]', '', 'g') IN (?, ?)
+                      AND l.consentimento_contato = true) = 1
             """, phone, national, phone, phone, national);
     }
 
