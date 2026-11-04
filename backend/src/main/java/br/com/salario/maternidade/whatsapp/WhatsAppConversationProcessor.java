@@ -42,6 +42,9 @@ public class WhatsAppConversationProcessor {
                 && transition.nextStep() == WhatsAppConversationFlow.Step.HANDOFF) {
             store.saveScreeningAnswer(message.sender(), "situacao_trabalho", normalize(message.text()));
         }
+        if (consent && transition.nextStep() != WhatsAppConversationFlow.Step.STOPPED) {
+            store.linkUniqueExistingLead(message.sender());
+        }
         return transition;
     }
     private static String normalize(String answer) {
