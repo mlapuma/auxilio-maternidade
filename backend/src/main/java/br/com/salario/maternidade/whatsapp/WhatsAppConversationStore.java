@@ -71,6 +71,28 @@ public class WhatsAppConversationStore {
             """, phone);
     }
 
+    /**
+     * Associates a consenting conversation with an existing lead only when
+     * exactly one lead has the same normalized international phone.
+     * Ambiguous matches are intentionally left for manual review.
+     */
+    public int linkUniqueExistingLead(String phone) {
+        validatePhone(phone);
+        return jdbc.update("""
+            UPDATE whatsapp_conversations c
+               SET lead_id = (
+                   SELECT l.id FROM leads l
+                    WHERE regexp_replace(l.telefone, '[^0-9]', '', 'g') = ?
+               ),
+                   atualizado_em = CURRENT_TIMESTAMP
+             WHERE c.telefone = ?
+               AND c.consentimento = true
+               AND c.lead_id IS NULL
+               AND (SELECT count(*) FROM leads l
+                    WHERE regexp_replace(l.telefone, '[^0-9]', '', 'g') = ?) = 1
+            """, phone, phone, phone);
+    }
+
     public void deleteByPhone(String phone) {
         validatePhone(phone);
         jdbc.update("DELETE FROM whatsapp_conversations WHERE telefone = ?", phone);
