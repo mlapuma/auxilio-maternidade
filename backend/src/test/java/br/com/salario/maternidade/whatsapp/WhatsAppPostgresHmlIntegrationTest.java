@@ -91,29 +91,35 @@ class WhatsAppPostgresHmlIntegrationTest {
                     assertTrue(definition.contains("ENVIANDO"));
                 }
 
-                // The production claim query depends on these columns and
-                // PostgreSQL syntax. EXPLAIN validates parsing/planning without
-                // claiming, updating or exposing any actual message.
+                // EXPLAIN (without ANALYZE) plans the actual UPDATE ... RETURNING
+                // used in production. It does not execute the update or claim a row.
                 try (Statement statement = connection.createStatement();
                      ResultSet rs = statement.executeQuery("""
-                         EXPLAIN SELECT o.id
-                           FROM whatsapp_outbox o
-                           JOIN whatsapp_conversations c ON c.telefone = o.telefone
-                          WHERE o.status = 'PENDENTE'
-                            AND NOT EXISTS (
-                                SELECT 1 FROM whatsapp_outbox active
-                                 WHERE active.telefone = o.telefone
-                                   AND active.status = 'ENVIANDO'
-                            )
-                            AND ((o.tipo_resposta = 'STANDARD'
-                                  AND c.consentimento = true AND c.etapa <> 'STOPPED')
-                              OR (o.tipo_resposta = 'CONSENT_REQUEST'
-                                  AND c.consentimento = false AND c.etapa = 'CONSENT'))
-                          ORDER BY o.criado_em, o.id
-                          FOR UPDATE OF o, c SKIP LOCKED
-                          LIMIT 1
+                         EXPLAIN
+                         UPDATE whatsapp_outbox SET status = 'ENVIANDO',
+                             tentativas = tentativas + 1,
+                             atualizado_em = CURRENT_TIMESTAMP
+                          WHERE id = (
+                              SELECT o.id FROM whatsapp_outbox o
+                              JOIN whatsapp_conversations c ON c.telefone = o.telefone
+                              WHERE o.status = 'PENDENTE'
+                                AND o.criado_em >= CURRENT_TIMESTAMP - INTERVAL '23 hours'
+                                AND NOT EXISTS (
+                                    SELECT 1 FROM whatsapp_outbox active
+                                    WHERE active.telefone = o.telefone
+                                      AND active.status = 'ENVIANDO'
+                                )
+                                AND ((o.tipo_resposta = 'STANDARD'
+                                      AND c.consentimento = true AND c.etapa <> 'STOPPED')
+                                  OR (o.tipo_resposta = 'CONSENT_REQUEST'
+                                      AND c.consentimento = false AND c.etapa = 'CONSENT'))
+                              ORDER BY o.criado_em, o.id
+                              FOR UPDATE OF o, c SKIP LOCKED
+                              LIMIT 1
+                          )
+                         RETURNING id, telefone, corpo
                          """)) {
-                    assertTrue(rs.next(), "PostgreSQL could not plan the dispatch query");
+                    assertTrue(rs.next(), "PostgreSQL could not plan the actual outbox claim");
                 }
 
                 try (Statement statement = connection.createStatement();
