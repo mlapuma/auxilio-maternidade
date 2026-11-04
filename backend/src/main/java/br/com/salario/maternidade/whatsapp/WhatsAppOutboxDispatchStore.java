@@ -55,6 +55,13 @@ public class WhatsAppOutboxDispatchStore {
                 JOIN whatsapp_conversations c ON c.telefone = o.telefone
                 WHERE o.status = 'PENDENTE'
                   AND o.criado_em >= CURRENT_TIMESTAMP - INTERVAL '23 hours'
+                  -- Do not dispatch two replies to the same recipient concurrently.
+                  -- A previously claimed reply may still be in flight at Meta.
+                  AND NOT EXISTS (
+                      SELECT 1 FROM whatsapp_outbox active
+                       WHERE active.telefone = o.telefone
+                         AND active.status = 'ENVIANDO'
+                  )
                   AND ((o.tipo_resposta = 'STANDARD'
                         AND c.consentimento = true AND c.etapa <> 'STOPPED')
                     OR (o.tipo_resposta = 'CONSENT_REQUEST'
