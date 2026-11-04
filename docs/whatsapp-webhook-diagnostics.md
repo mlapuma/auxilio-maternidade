@@ -4,7 +4,7 @@ O endpoint `GET /api/whatsapp/webhook` **retorna 403 por projeto** quando não r
 
 ## Verificação automatizada segura
 
-Com o Spring Boot e o Cloudflare Tunnel em execução, no PowerShell 7+:
+Com o Spring Boot e o Cloudflare Tunnel em execução, no Windows PowerShell 5.1 ou PowerShell 7+:
 
 ```powershell
 cd C:\Projetos\auxilio-maternidade-whatsapp\backend
