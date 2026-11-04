@@ -126,6 +126,21 @@ public class WhatsAppConversationStore {
             """, phone);
     }
 
+    /**
+     * An incoming answer supersedes earlier unsent triage prompts.
+     * Consent invitations are handled separately and are never affected here.
+     */
+    public int cancelPendingStandardReplies(String phone) {
+        validatePhone(phone);
+        return jdbc.update("""
+            UPDATE whatsapp_outbox
+               SET status = 'CANCELADO', atualizado_em = CURRENT_TIMESTAMP
+             WHERE telefone = ?
+               AND status = 'PENDENTE'
+               AND tipo_resposta = 'STANDARD'
+            """, phone);
+    }
+
     public int cancelPendingReplies(String phone) {
         validatePhone(phone);
         return jdbc.update("""
