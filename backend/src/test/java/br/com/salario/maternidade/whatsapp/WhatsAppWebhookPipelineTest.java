@@ -42,6 +42,34 @@ class WhatsAppWebhookPipelineTest {
     }
 
     @Test
+    void duplicateIdsInsideOnePayloadAdvanceConversationOnlyOnce() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        WhatsAppConversationProcessor processor = mock(WhatsAppConversationProcessor.class);
+        WhatsAppMessageHistoryStore history = mock(WhatsAppMessageHistoryStore.class);
+        WhatsAppReplyOutbox outbox = mock(WhatsAppReplyOutbox.class);
+        var inbound = new WhatsAppInboundMessage("wamid.same", PHONE, "SIM");
+        when(jdbc.update(anyString(), any(), any(), any(), any(), any()))
+            .thenReturn(1, 0);
+        when(processor.process(inbound)).thenReturn(
+            new WhatsAppConversationFlow.Transition(
+                WhatsAppConversationFlow.Step.BIRTH, "Qual a situação do bebê?", false));
+        var service = new WhatsAppWebhookService(new ObjectMapper(), jdbc,
+            new WhatsAppInboundMessageParser(new ObjectMapper()), processor, outbox, history);
+
+        service.accept("""
+            {"object":"whatsapp_business_account","entry":[{"changes":[{"value":{
+              "messages":[
+                {"id":"wamid.same","from":"5511999999999","type":"text","text":{"body":"SIM"}},
+                {"id":"wamid.same","from":"5511999999999","type":"text","text":{"body":"SIM"}}
+              ]}}]}]}
+            """);
+
+        verify(processor, times(1)).process(inbound);
+        verify(history, times(1)).recordInbound(inbound);
+        verify(outbox, times(1)).enqueue("wamid.same", PHONE, "Qual a situação do bebê?");
+    }
+
+    @Test
     void duplicateEventDoesNotRecordHistoryOrQueueReply() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         WhatsAppConversationProcessor processor = mock(WhatsAppConversationProcessor.class);
