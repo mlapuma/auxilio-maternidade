@@ -8,6 +8,19 @@ import static org.mockito.Mockito.*;
 
 class WhatsAppOutboxDispatchStoreTest {
     @Test
+    void expiresOnlyOldPendingReplies() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        var store = new WhatsAppOutboxDispatchStore(jdbc);
+
+        store.expireStalePendingReplies();
+
+        verify(jdbc).update(argThat(sql ->
+            sql.contains("status = 'EXPIRADO'")
+            && sql.contains("status = 'PENDENTE'")
+            && sql.contains("criado_em < CURRENT_TIMESTAMP - INTERVAL '23 hours'")));
+    }
+
+    @Test
     void claimsOnlyPendingMessagesWithActiveConsentAndUnstoppedConversation() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         var store = new WhatsAppOutboxDispatchStore(jdbc);
