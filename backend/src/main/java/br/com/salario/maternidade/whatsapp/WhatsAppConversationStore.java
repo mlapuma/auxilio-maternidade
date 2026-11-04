@@ -72,25 +72,27 @@ public class WhatsAppConversationStore {
     }
 
     /**
-     * Associates a consenting conversation with an existing lead only when
-     * exactly one lead has the same normalized international phone.
-     * Ambiguous matches are intentionally left for manual review.
+     * Associates only a uniquely matching, consenting existing lead.
+     * Brazilian leads may store a national number (DDD + subscriber) while
+     * WhatsApp supplies country code 55. Never use suffix-only matching.
      */
     public int linkUniqueExistingLead(String phone) {
         validatePhone(phone);
+        String national = phone.startsWith("55") && (phone.length() == 12 || phone.length() == 13)
+            ? phone.substring(2) : phone;
         return jdbc.update("""
             UPDATE whatsapp_conversations c
                SET lead_id = (
                    SELECT l.id FROM leads l
-                    WHERE regexp_replace(l.telefone, '[^0-9]', '', 'g') = ?
+                    WHERE regexp_replace(l.telefone, '[^0-9]', '', 'g') IN (?, ?)
                ),
                    atualizado_em = CURRENT_TIMESTAMP
              WHERE c.telefone = ?
                AND c.consentimento = true
                AND c.lead_id IS NULL
                AND (SELECT count(*) FROM leads l
-                    WHERE regexp_replace(l.telefone, '[^0-9]', '', 'g') = ?) = 1
-            """, phone, phone, phone);
+                    WHERE regexp_replace(l.telefone, '[^0-9]', '', 'g') IN (?, ?)) = 1
+            """, phone, national, phone, phone, national);
     }
 
     public void deleteByPhone(String phone) {
