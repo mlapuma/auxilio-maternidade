@@ -14,7 +14,7 @@ class WhatsAppOutboxDispatchStoreTest {
 
         store.expireStalePendingReplies();
 
-        verify(jdbc).update(argThat(sql ->
+        verify(jdbc).update(org.mockito.ArgumentMatchers.<String>argThat(sql ->
             sql.contains("status = 'EXPIRADO'")
             && sql.contains("status = 'PENDENTE'")
             && sql.contains("criado_em < CURRENT_TIMESTAMP - INTERVAL '23 hours'")));
