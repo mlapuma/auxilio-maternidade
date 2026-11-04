@@ -122,6 +122,47 @@ class WhatsAppPostgresHmlIntegrationTest {
                     assertTrue(rs.next(), "PostgreSQL could not plan the actual outbox claim");
                 }
 
+                // Plan the remaining production SQL statements without executing
+                // them. EXPLAIN without ANALYZE is safe for read-only HML.
+                String[] dispatchStatements = {
+                    """
+                    UPDATE whatsapp_outbox
+                       SET status = 'EXPIRADO', atualizado_em = CURRENT_TIMESTAMP
+                     WHERE status = 'PENDENTE'
+                       AND criado_em < CURRENT_TIMESTAMP - INTERVAL '23 hours'
+                    """,
+                    """
+                    UPDATE whatsapp_outbox
+                       SET status = 'REVISAR', atualizado_em = CURRENT_TIMESTAMP
+                     WHERE status = 'ENVIANDO'
+                       AND atualizado_em < CURRENT_TIMESTAMP - INTERVAL '10 minutes'
+                    """,
+                    """
+                    UPDATE whatsapp_outbox
+                       SET status = 'CANCELADO', atualizado_em = CURRENT_TIMESTAMP
+                     WHERE id = '00000000-0000-0000-0000-000000000000'::uuid
+                       AND status = 'ENVIANDO'
+                    """,
+                    """
+                    INSERT INTO whatsapp_message_history
+                        (id, conversa_id, mensagem_externa_id, direcao, conteudo)
+                    SELECT '00000000-0000-0000-0000-000000000000'::uuid,
+                           c.id, 'outbox:' || o.id::text, 'SAIDA', o.corpo
+                      FROM whatsapp_outbox o
+                      JOIN whatsapp_conversations c ON c.telefone = o.telefone
+                     WHERE o.id = '00000000-0000-0000-0000-000000000000'::uuid
+                       AND o.status = 'ENVIADO'
+                       AND c.consentimento = true AND c.etapa <> 'STOPPED'
+                    ON CONFLICT (mensagem_externa_id) DO NOTHING
+                    """
+                };
+                for (String sql : dispatchStatements) {
+                    try (Statement statement = connection.createStatement();
+                         ResultSet rs = statement.executeQuery("EXPLAIN " + sql)) {
+                        assertTrue(rs.next(), "PostgreSQL could not plan a dispatch statement");
+                    }
+                }
+
                 // No two messages should be in flight for the same recipient.
                 // Return only an aggregate count; never expose phone numbers.
                 try (Statement statement = connection.createStatement();
