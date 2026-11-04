@@ -17,6 +17,7 @@ public class WhatsAppWebhookService {
     private final WhatsAppInboundMessageParser inboundParser;
     private final WhatsAppConversationProcessor conversationProcessor;
     private final WhatsAppReplyOutbox replyOutbox;
+    private final WhatsAppMessageHistoryStore historyStore;
 
     public WhatsAppWebhookService(ObjectMapper mapper, JdbcTemplate jdbc) {
         this.mapper = mapper;
@@ -24,24 +25,34 @@ public class WhatsAppWebhookService {
         this.inboundParser = null;
         this.conversationProcessor = null;
         this.replyOutbox = null;
+        this.historyStore = null;
     }
 
     public WhatsAppWebhookService(ObjectMapper mapper, JdbcTemplate jdbc,
             WhatsAppInboundMessageParser inboundParser,
             WhatsAppConversationProcessor conversationProcessor) {
-        this(mapper, jdbc, inboundParser, conversationProcessor, null);
+        this(mapper, jdbc, inboundParser, conversationProcessor, null, null);
+    }
+
+    public WhatsAppWebhookService(ObjectMapper mapper, JdbcTemplate jdbc,
+            WhatsAppInboundMessageParser inboundParser,
+            WhatsAppConversationProcessor conversationProcessor,
+            WhatsAppReplyOutbox replyOutbox) {
+        this(mapper, jdbc, inboundParser, conversationProcessor, replyOutbox, null);
     }
 
     @Autowired
     public WhatsAppWebhookService(ObjectMapper mapper, JdbcTemplate jdbc,
             WhatsAppInboundMessageParser inboundParser,
             WhatsAppConversationProcessor conversationProcessor,
-            WhatsAppReplyOutbox replyOutbox) {
+            WhatsAppReplyOutbox replyOutbox,
+            WhatsAppMessageHistoryStore historyStore) {
         this.mapper = mapper;
         this.jdbc = jdbc;
         this.inboundParser = inboundParser;
         this.conversationProcessor = conversationProcessor;
         this.replyOutbox = replyOutbox;
+        this.historyStore = historyStore;
     }
 
     @Transactional
@@ -73,6 +84,9 @@ public class WhatsAppWebhookService {
                 // Only newly inserted webhook events can advance conversation state.
                 if (insertedMessageIds.contains(message.messageId())) {
                     var transition = conversationProcessor.process(message);
+                    if (historyStore != null) {
+                        historyStore.recordInbound(message);
+                    }
                     if (replyOutbox != null) {
                         replyOutbox.enqueue(message.messageId(), message.sender(), transition.reply());
                     }
