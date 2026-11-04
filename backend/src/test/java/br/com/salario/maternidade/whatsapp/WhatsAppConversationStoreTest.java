@@ -43,4 +43,20 @@ class WhatsAppConversationStoreTest {
             store.saveScreeningAnswer("5511999999999", "outro", "SIM"));
         verifyNoInteractions(jdbc);
     }
+    @Test
+    void linksOnlyOneExistingLeadWithConsent() {
+        store.linkUniqueExistingLead("5511999999999");
+        verify(jdbc).update(argThat(sql ->
+            sql.contains("c.consentimento = true")
+            && sql.contains("c.lead_id IS NULL")
+            && sql.contains("count(*)")
+            && sql.contains("regexp_replace")),
+            eq("5511999999999"), eq("5511999999999"), eq("5511999999999"));
+    }
+
+    @Test
+    void refusesInvalidPhoneForLeadLink() {
+        assertThrows(IllegalArgumentException.class, () -> store.linkUniqueExistingLead("invalid"));
+        verifyNoInteractions(jdbc);
+    }
 }
