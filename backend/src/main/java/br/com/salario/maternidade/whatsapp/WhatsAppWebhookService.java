@@ -81,8 +81,9 @@ public class WhatsAppWebhookService {
         }
         if (inboundParser != null && conversationProcessor != null) {
             for (WhatsAppInboundMessage message : inboundParser.parse(payload)) {
-                // Only newly inserted webhook events can advance conversation state.
-                if (insertedMessageIds.contains(message.messageId())) {
+                // Consume each newly inserted event ID once, even if Meta includes
+                // the same message more than once in a single webhook payload.
+                if (insertedMessageIds.remove(message.messageId())) {
                     var transition = conversationProcessor.process(message);
                     if (historyStore != null) {
                         historyStore.recordInbound(message);
