@@ -12,16 +12,21 @@ import org.springframework.stereotype.Component;
 public class WhatsAppOutboxScheduler {
     private final WhatsAppOutboxDispatcher dispatcher;
     private final boolean enabled;
+    private final boolean sendingEnabled;
 
     public WhatsAppOutboxScheduler(WhatsAppOutboxDispatcher dispatcher,
-            @Value("${WHATSAPP_OUTBOX_SCHEDULER_ENABLED:false}") boolean enabled) {
+            @Value("${WHATSAPP_OUTBOX_SCHEDULER_ENABLED:false}") boolean enabled,
+            @Value("${WHATSAPP_SENDING_ENABLED:false}") boolean sendingEnabled) {
         this.dispatcher = dispatcher;
         this.enabled = enabled;
+        this.sendingEnabled = sendingEnabled;
     }
 
     @Scheduled(fixedDelayString = "${WHATSAPP_OUTBOX_POLL_INTERVAL_MS:30000}")
     public void poll() {
-        if (!enabled) return;
+        // Never claim messages when the Cloud API sender is disabled:
+        // claiming would incorrectly move them to manual review.
+        if (!enabled || !sendingEnabled) return;
         dispatcher.dispatchOne();
     }
 }
