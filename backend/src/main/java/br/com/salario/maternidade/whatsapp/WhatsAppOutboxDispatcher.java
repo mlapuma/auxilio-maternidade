@@ -25,6 +25,10 @@ public class WhatsAppOutboxDispatcher {
 
         var reply = claimed.get();
         try {
+            if (!store.stillEligible(reply.id())) {
+                store.cancelClaimedReply(reply.id());
+                return true;
+            }
             client.sendText(reply.phone(), reply.body());
             store.markSent(reply.id());
         } catch (RuntimeException ex) {
