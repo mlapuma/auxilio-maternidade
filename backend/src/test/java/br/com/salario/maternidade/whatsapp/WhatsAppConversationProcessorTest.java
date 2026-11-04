@@ -21,6 +21,21 @@ class WhatsAppConversationProcessorTest {
     }
 
     @Test
+    void repeatedConsentPromptSupersedesUnsentInvitations() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(
+                PHONE, WhatsAppConversationFlow.Step.CONSENT, false)));
+
+        var transition = processor.process(
+            new WhatsAppInboundMessage("wamid.repeat", PHONE, "talvez"));
+
+        assertEquals(WhatsAppConversationFlow.Step.CONSENT, transition.nextStep());
+        verify(store).cancelPendingConsentRequests(PHONE);
+        verify(store, never()).cancelPendingReplies(PHONE);
+        verify(store, never()).linkUniqueExistingLead(PHONE);
+    }
+
+    @Test
     void consentMovesForward() {
         when(store.findByPhone(PHONE)).thenReturn(Optional.of(
             new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.CONSENT, false)));
