@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Claims a single reply atomically. Failed or ambiguous sends are held for
@@ -40,12 +41,25 @@ public class WhatsAppOutboxDispatchStore {
                 : Optional.empty());
     }
 
+    @Transactional
     public void markSent(UUID id) {
         jdbc.update("""
             UPDATE whatsapp_outbox SET status = 'ENVIADO',
                 atualizado_em = CURRENT_TIMESTAMP
             WHERE id = ? AND status = 'ENVIANDO'
             """, id);
+        // Persist a successful API submission only once, using the outbox UUID
+        // as a stable external identifier. Never store the reply without consent.
+        jdbc.update("""
+            INSERT INTO whatsapp_message_history
+                (id, conversa_id, mensagem_externa_id, direcao, conteudo)
+            SELECT ?, c.id, 'outbox:' || o.id::text, 'SAIDA', o.corpo
+              FROM whatsapp_outbox o
+              JOIN whatsapp_conversations c ON c.telefone = o.telefone
+             WHERE o.id = ? AND o.status = 'ENVIADO'
+               AND c.consentimento = true AND c.etapa <> 'STOPPED'
+            ON CONFLICT (mensagem_externa_id) DO NOTHING
+            """, UUID.randomUUID(), id);
     }
 
     public void markForReview(UUID id) {
