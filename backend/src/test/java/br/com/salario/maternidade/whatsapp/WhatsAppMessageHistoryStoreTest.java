@@ -12,7 +12,7 @@ class WhatsAppMessageHistoryStoreTest {
         var store = new WhatsAppMessageHistoryStore(jdbc);
         store.recordInbound(new WhatsAppInboundMessage("wamid.123", "5511999999999", "GESTANTE"));
         verify(jdbc).update(
-            allOf(contains("consentimento = true"), contains("ON CONFLICT"), contains("etapa <> 'STOPPED'")),
+            argThat(sql -> sql.contains("consentimento = true") && sql.contains("ON CONFLICT") && sql.contains("etapa <> 'STOPPED'")),
             any(), eq("wamid.123"), eq("GESTANTE"), eq("5511999999999"));
     }
 }
