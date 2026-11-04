@@ -96,6 +96,21 @@ public class WhatsAppConversationStore {
     }
 
     /** Cancels unsent replies when consent is revoked or the flow restarts. */
+    /**
+     * A consent reply can arrive before the queued invitation is dispatched.
+     * Drop obsolete invitations without touching triage replies.
+     */
+    public int cancelPendingConsentRequests(String phone) {
+        validatePhone(phone);
+        return jdbc.update("""
+            UPDATE whatsapp_outbox
+               SET status = 'CANCELADO', atualizado_em = CURRENT_TIMESTAMP
+             WHERE telefone = ?
+               AND status = 'PENDENTE'
+               AND tipo_resposta = 'CONSENT_REQUEST'
+            """, phone);
+    }
+
     public int cancelPendingReplies(String phone) {
         validatePhone(phone);
         return jdbc.update("""
