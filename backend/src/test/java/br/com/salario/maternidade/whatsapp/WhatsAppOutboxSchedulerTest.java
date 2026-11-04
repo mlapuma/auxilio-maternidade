@@ -7,14 +7,21 @@ class WhatsAppOutboxSchedulerTest {
     @Test
     void disabledSchedulerDoesNotDispatch() {
         var dispatcher = mock(WhatsAppOutboxDispatcher.class);
-        new WhatsAppOutboxScheduler(dispatcher, false).poll();
+        new WhatsAppOutboxScheduler(dispatcher, false, true).poll();
+        verifyNoInteractions(dispatcher);
+    }
+
+    @Test
+    void enabledSchedulerDoesNotClaimWhenSendingDisabled() {
+        var dispatcher = mock(WhatsAppOutboxDispatcher.class);
+        new WhatsAppOutboxScheduler(dispatcher, true, false).poll();
         verifyNoInteractions(dispatcher);
     }
 
     @Test
     void enabledSchedulerDispatchesOncePerTick() {
         var dispatcher = mock(WhatsAppOutboxDispatcher.class);
-        new WhatsAppOutboxScheduler(dispatcher, true).poll();
+        new WhatsAppOutboxScheduler(dispatcher, true, true).poll();
         verify(dispatcher, times(1)).dispatchOne();
     }
 }
