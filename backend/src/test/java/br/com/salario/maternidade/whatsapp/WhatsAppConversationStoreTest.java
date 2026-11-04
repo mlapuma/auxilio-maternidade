@@ -71,6 +71,16 @@ class WhatsAppConversationStoreTest {
     }
 
     @Test
+    void cancelsOnlyPendingRepliesForPhone() {
+        store.cancelPendingReplies("5511999999999");
+        verify(jdbc).update(argThat(sql ->
+            sql.contains("status = 'CANCELADO'")
+            && sql.contains("status = 'PENDENTE'")
+            && sql.contains("WHERE telefone = ?")),
+            eq("5511999999999"));
+    }
+
+    @Test
     void refusesInvalidPhoneForLeadLink() {
         assertThrows(IllegalArgumentException.class, () -> store.linkUniqueExistingLead("invalid"));
         verifyNoInteractions(jdbc);
