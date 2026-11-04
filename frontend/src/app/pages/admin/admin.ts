@@ -12,6 +12,20 @@ interface WhatsAppOutboxCounts {
   review: number;
 }
 
+interface WhatsAppMessage {
+  id: string;
+  direction: string;
+  content: string;
+  createdAt: string;
+}
+interface WhatsAppConversation {
+  leadId: string;
+  step: string;
+  consent: boolean;
+  screeningAnswers: string | null;
+  messages: WhatsAppMessage[];
+}
+
 interface LeadResumo {
   id: string;
   protocolo: string;
@@ -59,8 +73,13 @@ export class Admin {
   readonly carregando = signal(false);
   readonly salvandoId = signal<string | null>(null);
   readonly leadDetalhado = signal<LeadResumo | null>(null);
-  readonly tipoDetalhe = signal<'triagens' | 'historico' | null>(null);
+  readonly tipoDetalhe = signal<'triagens' | 'historico' | 'whatsapp' | null>(null);
   readonly triagens = signal<TriagemDetalhe[]>([]);
+  readonly conversaWhatsApp = signal<WhatsAppConversation | null>(null);
+  readonly whatsappHistoricoCarregando = signal(false);
+  readonly whatsappHistoricoConsultado = signal(false);
+  readonly whatsappHistoricoErro = signal('');
+  private whatsappConsultaVersao = 0;
   readonly historico = signal<HistoricoResumo[]>([]);
   readonly carregandoHistorico = signal(false);
   readonly historicoConsultado = signal(false);
@@ -225,7 +244,58 @@ export class Admin {
     });
   }
 
+  consultarWhatsApp(lead: LeadResumo): void {
+    if (!this.autorizacao) return;
+    const versao = ++this.whatsappConsultaVersao;
+    this.leadDetalhado.set(lead);
+    this.tipoDetalhe.set('whatsapp');
+    this.conversaWhatsApp.set(null);
+    this.whatsappHistoricoErro.set('');
+    this.whatsappHistoricoConsultado.set(false);
+    this.whatsappHistoricoCarregando.set(true);
+    const autorizacao = this.autorizacao;
+    this.http.get<WhatsAppConversation>(
+      '/api/admin/leads/' + encodeURIComponent(lead.id) + '/whatsapp',
+      { headers: new HttpHeaders({ Authorization: autorizacao }), params: { limit: 50 } },
+    ).pipe(finalize(() => {
+      if (versao === this.whatsappConsultaVersao) this.whatsappHistoricoCarregando.set(false);
+    })).subscribe({
+      next: dados => {
+        if (versao !== this.whatsappConsultaVersao || autorizacao !== this.autorizacao) return;
+        this.conversaWhatsApp.set(dados);
+        this.whatsappHistoricoConsultado.set(true);
+      },
+      error: (err: HttpErrorResponse) => {
+        if (versao !== this.whatsappConsultaVersao || autorizacao !== this.autorizacao) return;
+        this.whatsappHistoricoConsultado.set(true);
+        if (err.status === 401 || err.status === 403) {
+          this.sair();
+          this.erro.set('Acesso não autorizado. Entre novamente.');
+        } else if (err.status !== 404) {
+          this.whatsappHistoricoErro.set('Não foi possível consultar a conversa WhatsApp.');
+        }
+      },
+    });
+  }
+
+  respostasWhatsApp(): { pergunta: string; resposta: string }[] {
+    const raw = this.conversaWhatsApp()?.screeningAnswers;
+    if (!raw) return [];
+    try {
+      const dados: unknown = JSON.parse(raw);
+      if (!dados || typeof dados !== 'object' || Array.isArray(dados)) return [];
+      return Object.entries(dados)
+        .filter((item): item is [string, string] => typeof item[1] === 'string')
+        .map(([pergunta, resposta]) => ({ pergunta, resposta }));
+    } catch { return []; }
+  }
+
   fecharDetalhes(): void {
+    ++this.whatsappConsultaVersao;
+    this.conversaWhatsApp.set(null);
+    this.whatsappHistoricoCarregando.set(false);
+    this.whatsappHistoricoConsultado.set(false);
+    this.whatsappHistoricoErro.set('');
     this.leadDetalhado.set(null);
     this.tipoDetalhe.set(null);
     this.triagens.set([]);
