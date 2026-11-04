@@ -61,7 +61,8 @@ class WhatsAppWebhookFullFlowTest {
         assertEquals(WhatsAppConversationFlow.Step.HANDOFF, state.get().step());
         assertEquals(List.of("situacao_bebe=GESTANTE", "situacao_trabalho=NAO_SEI"), answers);
 
-        verify(outbox, times(4)).enqueue(anyString(), eq(PHONE), anyString());
+        verify(outbox, times(3)).enqueue(anyString(), eq(PHONE), anyString());
+        verify(outbox).enqueue(eq("wamid.full.1"), eq(PHONE), anyString(), eq(true));
         verify(history, times(4)).recordInbound(any(WhatsAppInboundMessage.class));
         verify(store, times(3)).linkUniqueExistingLead(PHONE);
         verify(store, times(4)).save(any(WhatsAppConversationStore.Conversation.class));
@@ -92,7 +93,8 @@ class WhatsAppWebhookFullFlowTest {
         assertFalse(state.get().consent());
         verify(store, never()).linkUniqueExistingLead(anyString());
         verify(store, never()).saveScreeningAnswer(anyString(), anyString(), anyString());
-        verify(outbox, times(2)).enqueue(anyString(), eq(PHONE), anyString());
+        verify(outbox).enqueue(eq("wamid.refusal.1"), eq(PHONE), anyString(), eq(true));
+        verify(outbox).enqueue(eq("wamid.refusal.2"), eq(PHONE), anyString());
     }
 
     private static void acceptTwice(WhatsAppWebhookService service, String id, String body)
