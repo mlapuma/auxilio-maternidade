@@ -29,11 +29,21 @@ class WhatsAppConversationProcessorTest {
     }
 
     @Test
-    void refusalRemovesConversation() {
+    void refusalStopsConversationWithoutDeletingIt() {
         when(store.findByPhone(PHONE)).thenReturn(Optional.of(
             new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.CONSENT, false)));
         processor.process(new WhatsAppInboundMessage("wamid.3", PHONE, "não"));
-        verify(store).deleteByPhone(PHONE);
-        verify(store, never()).save(any());
+        verify(store).save(new WhatsAppConversationStore.Conversation(
+            PHONE, WhatsAppConversationFlow.Step.STOPPED, false));
+        verify(store, never()).deleteByPhone(anyString());
+    }
+    @Test
+    void stoppedConversationCanRestartWithoutPreviousConsent() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.STOPPED, false)));
+        var transition = processor.process(new WhatsAppInboundMessage("wamid.4", PHONE, "INICIAR"));
+        assertEquals(WhatsAppConversationFlow.Step.CONSENT, transition.nextStep());
+        verify(store).save(new WhatsAppConversationStore.Conversation(
+            PHONE, WhatsAppConversationFlow.Step.CONSENT, false));
     }
 }
