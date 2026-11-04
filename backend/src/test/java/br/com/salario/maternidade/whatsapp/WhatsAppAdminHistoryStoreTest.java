@@ -34,6 +34,9 @@ class WhatsAppAdminHistoryStoreTest {
                 String sql = invocation.getArgument(0);
                 assertTrue(sql.contains("WHERE h.conversa_id = ?"));
                 assertFalse(sql.contains("WHERE c.lead_id = ?"));
+                assertTrue(sql.contains("ORDER BY h.criado_em DESC, h.id DESC"));
+                assertTrue(sql.contains("LIMIT ?"));
+                assertTrue(sql.contains("ORDER BY recentes.criado_em ASC, recentes.id ASC"));
                 return List.of();
             });
 
