@@ -22,9 +22,24 @@ class WhatsAppOutboxDispatcherTest {
     }
 
     @Test
+    void revokedConsentCancelsClaimedMessageWithoutCallingMeta() {
+        when(store.claimOne()).thenReturn(Optional.of(
+            new WhatsAppOutboxDispatchStore.PendingReply(id, "5511999999999", "Olá")));
+        when(store.stillEligible(id)).thenReturn(false);
+
+        assertTrue(dispatcher.dispatchOne());
+
+        verify(store).cancelClaimedReply(id);
+        verify(store, never()).markSent(id);
+        verify(store, never()).markForReview(id);
+        verifyNoInteractions(client);
+    }
+
+    @Test
     void successfulSendMarksSent() {
         when(store.claimOne()).thenReturn(Optional.of(
             new WhatsAppOutboxDispatchStore.PendingReply(id, "5511999999999", "Olá")));
+        when(store.stillEligible(id)).thenReturn(true);
         assertTrue(dispatcher.dispatchOne());
         verify(client).sendText("5511999999999", "Olá");
         verify(store).markSent(id);
@@ -37,6 +52,7 @@ class WhatsAppOutboxDispatcherTest {
             new WhatsAppOutboxDispatchStore.PendingReply(id, "5511999999999", "Olá")));
         doThrow(new IllegalStateException("disabled")).when(client)
             .sendText("5511999999999", "Olá");
+        when(store.stillEligible(id)).thenReturn(true);
         assertTrue(dispatcher.dispatchOne());
         verify(client, times(1)).sendText("5511999999999", "Olá");
         verify(store).markForReview(id);
