@@ -44,6 +44,8 @@ class WhatsAppOutboxDispatchStoreTest {
             sql.contains("JOIN whatsapp_conversations c ON c.telefone = o.telefone")
             && sql.contains("c.consentimento = true")
             && sql.contains("c.etapa <> 'STOPPED'")
+            && sql.contains("o.tipo_resposta = 'CONSENT_REQUEST'")
+            && sql.contains("c.consentimento = false AND c.etapa = 'CONSENT'")
             && sql.contains("o.status = 'PENDENTE'")
             && sql.contains("FOR UPDATE OF o SKIP LOCKED")
             && sql.contains("INTERVAL '23 hours'")),
