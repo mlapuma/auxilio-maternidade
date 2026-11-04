@@ -33,6 +33,19 @@ public class WhatsAppOutboxDispatchStore {
             """);
     }
 
+    /**
+     * A process may crash after claiming a message or after Meta accepted it.
+     * Never automatically retry these ambiguous deliveries: require review.
+     */
+    public int flagStuckSendingForReview() {
+        return jdbc.update("""
+            UPDATE whatsapp_outbox
+               SET status = 'REVISAR', atualizado_em = CURRENT_TIMESTAMP
+             WHERE status = 'ENVIANDO'
+               AND atualizado_em < CURRENT_TIMESTAMP - INTERVAL '10 minutes'
+            """);
+    }
+
     public Optional<PendingReply> claimOne() {
         return jdbc.query("""
             UPDATE whatsapp_outbox SET status = 'ENVIANDO',
