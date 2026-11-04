@@ -8,6 +8,23 @@ import static org.mockito.Mockito.*;
 
 class WhatsAppOutboxDispatchStoreTest {
     @Test
+    void claimsOnlyPendingMessagesWithActiveConsentAndUnstoppedConversation() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        var store = new WhatsAppOutboxDispatchStore(jdbc);
+
+        store.claimOne();
+
+        verify(jdbc).query(argThat(sql ->
+            sql.contains("JOIN whatsapp_conversations c ON c.telefone = o.telefone")
+            && sql.contains("c.consentimento = true")
+            && sql.contains("c.etapa <> 'STOPPED'")
+            && sql.contains("o.status = 'PENDENTE'")
+            && sql.contains("FOR UPDATE OF o SKIP LOCKED")
+            && sql.contains("INTERVAL '23 hours'")),
+            any(org.springframework.jdbc.core.ResultSetExtractor.class));
+    }
+
+    @Test
     void marksSentAndRecordsOnlyConsentedOutboundHistory() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         var store = new WhatsAppOutboxDispatchStore(jdbc);
