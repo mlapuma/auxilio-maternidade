@@ -43,6 +43,34 @@ public class WhatsAppConversationStore {
             conversation.step().name(), conversation.consent());
     }
 
+    /** Stores only validated screening answers after consent. */
+    public void saveScreeningAnswer(String phone, String key, String value) {
+        validatePhone(phone);
+        if (!"situacao_bebe".equals(key) && !"situacao_trabalho".equals(key)) {
+            throw new IllegalArgumentException("Unsupported screening answer key");
+        }
+        if (value == null || !value.matches("[A-Z_]{2,20}")) {
+            throw new IllegalArgumentException("Invalid screening answer");
+        }
+        jdbc.update("""
+            UPDATE whatsapp_conversations
+               SET respostas_triagem = jsonb_set(
+                   COALESCE(respostas_triagem, '{}'::jsonb),
+                   ARRAY[?]::text[], to_jsonb(?::text), true),
+                   atualizado_em = CURRENT_TIMESTAMP
+             WHERE telefone = ? AND consentimento = true
+            """, key, value, phone);
+    }
+
+    public void clearScreeningAnswers(String phone) {
+        validatePhone(phone);
+        jdbc.update("""
+            UPDATE whatsapp_conversations
+               SET respostas_triagem = NULL, atualizado_em = CURRENT_TIMESTAMP
+             WHERE telefone = ?
+            """, phone);
+    }
+
     public void deleteByPhone(String phone) {
         validatePhone(phone);
         jdbc.update("DELETE FROM whatsapp_conversations WHERE telefone = ?", phone);
