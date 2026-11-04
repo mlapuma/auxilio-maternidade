@@ -60,6 +60,62 @@ class WhatsAppPostgresHmlIntegrationTest {
                     }
                 }
 
+                // Verify actual PostgreSQL constraints, not just migration filenames.
+                try (Statement statement = connection.createStatement();
+                     ResultSet rs = statement.executeQuery("""
+                         SELECT conname
+                           FROM pg_constraint
+                          WHERE conrelid = 'whatsapp_outbox'::regclass
+                            AND conname IN ('chk_whatsapp_outbox_status',
+                                            'chk_whatsapp_outbox_tipo_resposta')
+                         """)) {
+                    Set<String> constraints = new HashSet<>();
+                    while (rs.next()) constraints.add(rs.getString(1));
+                    assertEquals(Set.of("chk_whatsapp_outbox_status",
+                        "chk_whatsapp_outbox_tipo_resposta"), constraints,
+                        "Missing WhatsApp outbox integrity constraints");
+                }
+
+                // Confirm that the recipient index is partial, so historical
+                // messages do not inflate it. This is a metadata-only query.
+                try (Statement statement = connection.createStatement();
+                     ResultSet rs = statement.executeQuery("""
+                         SELECT indexdef FROM pg_indexes
+                          WHERE schemaname = current_schema()
+                            AND tablename = 'whatsapp_outbox'
+                            AND indexname = 'idx_whatsapp_outbox_enviando_telefone'
+                         """)) {
+                    assertTrue(rs.next(), "Missing in-flight recipient index");
+                    String definition = rs.getString(1);
+                    assertTrue(definition.contains("(telefone)"));
+                    assertTrue(definition.contains("ENVIANDO"));
+                }
+
+                // The production claim query depends on these columns and
+                // PostgreSQL syntax. EXPLAIN validates parsing/planning without
+                // claiming, updating or exposing any actual message.
+                try (Statement statement = connection.createStatement();
+                     ResultSet rs = statement.executeQuery("""
+                         EXPLAIN SELECT o.id
+                           FROM whatsapp_outbox o
+                           JOIN whatsapp_conversations c ON c.telefone = o.telefone
+                          WHERE o.status = 'PENDENTE'
+                            AND NOT EXISTS (
+                                SELECT 1 FROM whatsapp_outbox active
+                                 WHERE active.telefone = o.telefone
+                                   AND active.status = 'ENVIANDO'
+                            )
+                            AND ((o.tipo_resposta = 'STANDARD'
+                                  AND c.consentimento = true AND c.etapa <> 'STOPPED')
+                              OR (o.tipo_resposta = 'CONSENT_REQUEST'
+                                  AND c.consentimento = false AND c.etapa = 'CONSENT'))
+                          ORDER BY o.criado_em, o.id
+                          FOR UPDATE OF o, c SKIP LOCKED
+                          LIMIT 1
+                         """)) {
+                    assertTrue(rs.next(), "PostgreSQL could not plan the dispatch query");
+                }
+
                 try (Statement statement = connection.createStatement();
                      ResultSet rs = statement.executeQuery("""
                          SELECT COUNT(*) FROM whatsapp_conversations
