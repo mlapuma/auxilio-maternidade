@@ -46,4 +46,23 @@ class WhatsAppConversationProcessorTest {
         verify(store).save(new WhatsAppConversationStore.Conversation(
             PHONE, WhatsAppConversationFlow.Step.CONSENT, false));
     }
+    @Test
+    void persistsBirthAndWorkAnswersAfterConsent() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.BIRTH, true)),
+            Optional.of(new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.WORK, true)));
+        processor.process(new WhatsAppInboundMessage("wamid.5", PHONE, "GESTANTE"));
+        processor.process(new WhatsAppInboundMessage("wamid.6", PHONE, "NÃO SEI"));
+        verify(store).saveScreeningAnswer(PHONE, "situacao_bebe", "GESTANTE");
+        verify(store).saveScreeningAnswer(PHONE, "situacao_trabalho", "NAO_SEI");
+    }
+
+    @Test
+    void clearsAnswersOnStop() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.WORK, true)));
+        processor.process(new WhatsAppInboundMessage("wamid.7", PHONE, "SAIR"));
+        verify(store).clearScreeningAnswers(PHONE);
+        verify(store, never()).deleteByPhone(anyString());
+    }
 }
