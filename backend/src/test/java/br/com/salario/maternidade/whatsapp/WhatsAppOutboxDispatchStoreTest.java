@@ -14,7 +14,7 @@ class WhatsAppOutboxDispatchStoreTest {
 
         store.claimOne();
 
-        verify(jdbc).query(argThat(sql ->
+        verify(jdbc).query(org.mockito.ArgumentMatchers.<String>argThat(sql ->
             sql.contains("JOIN whatsapp_conversations c ON c.telefone = o.telefone")
             && sql.contains("c.consentimento = true")
             && sql.contains("c.etapa <> 'STOPPED'")
