@@ -34,11 +34,15 @@ public class WhatsAppAdminHistoryStore {
 
         var row = conversations.get(0);
         List<Message> messages = jdbc.query("""
-            SELECT h.id, h.direcao, h.conteudo, h.criado_em
-              FROM whatsapp_message_history h
-             WHERE h.conversa_id = ?
-             ORDER BY h.criado_em DESC, h.id DESC
-             LIMIT ?
+            SELECT recentes.id, recentes.direcao, recentes.conteudo, recentes.criado_em
+              FROM (
+                SELECT h.id, h.direcao, h.conteudo, h.criado_em
+                  FROM whatsapp_message_history h
+                 WHERE h.conversa_id = ?
+                 ORDER BY h.criado_em DESC, h.id DESC
+                 LIMIT ?
+              ) recentes
+             ORDER BY recentes.criado_em ASC, recentes.id ASC
             """, (rs, rowNum) -> new Message(
                 (UUID) rs.getObject("id"), rs.getString("direcao"),
                 rs.getString("conteudo"), rs.getObject("criado_em", OffsetDateTime.class)),
