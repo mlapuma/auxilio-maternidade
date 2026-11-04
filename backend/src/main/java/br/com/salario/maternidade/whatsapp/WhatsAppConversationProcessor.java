@@ -1,5 +1,6 @@
 package br.com.salario.maternidade.whatsapp;
 
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 
 /**
@@ -30,6 +31,21 @@ public class WhatsAppConversationProcessor {
         }
         store.save(new WhatsAppConversationStore.Conversation(
             message.sender(), transition.nextStep(), consent));
+        if (transition.nextStep() == WhatsAppConversationFlow.Step.STOPPED
+                || (current.step() == WhatsAppConversationFlow.Step.STOPPED
+                    && transition.nextStep() == WhatsAppConversationFlow.Step.CONSENT)) {
+            store.clearScreeningAnswers(message.sender());
+        } else if (consent && current.step() == WhatsAppConversationFlow.Step.BIRTH
+                && transition.nextStep() == WhatsAppConversationFlow.Step.WORK) {
+            store.saveScreeningAnswer(message.sender(), "situacao_bebe", normalize(message.text()));
+        } else if (consent && current.step() == WhatsAppConversationFlow.Step.WORK
+                && transition.nextStep() == WhatsAppConversationFlow.Step.HANDOFF) {
+            store.saveScreeningAnswer(message.sender(), "situacao_trabalho", normalize(message.text()));
+        }
         return transition;
+    }
+    private static String normalize(String answer) {
+        return java.text.Normalizer.normalize(answer.strip(), java.text.Normalizer.Form.NFD)
+            .replaceAll("\\p{M}+", "").toUpperCase(Locale.ROOT).replace(' ', '_');
     }
 }
