@@ -30,4 +30,17 @@ class WhatsAppConversationStoreTest {
         store.deleteByPhone("5511999999999");
         verify(jdbc).update(contains("DELETE FROM whatsapp_conversations"), eq("5511999999999"));
     }
+    @Test
+    void storesStructuredAnswerOnlyWithConsent() {
+        store.saveScreeningAnswer("5511999999999", "situacao_trabalho", "NAO_SEI");
+        verify(jdbc).update(contains("consentimento = true"),
+            eq("situacao_trabalho"), eq("NAO_SEI"), eq("5511999999999"));
+    }
+
+    @Test
+    void rejectsUnsupportedScreeningKey() {
+        assertThrows(IllegalArgumentException.class, () ->
+            store.saveScreeningAnswer("5511999999999", "outro", "SIM"));
+        verifyNoInteractions(jdbc);
+    }
 }
