@@ -18,6 +18,7 @@ public class WhatsAppOutboxDispatcher {
     }
 
     public boolean dispatchOne() {
+        store.expireStalePendingReplies();
         var claimed = store.claimOne();
         if (claimed.isEmpty()) return false;
 
