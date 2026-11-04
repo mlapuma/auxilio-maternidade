@@ -85,7 +85,8 @@ class WhatsAppConversationStoreTest {
             && sql.contains("c.lead_id IS NULL")
             && sql.contains("count(*)")
             && sql.contains("regexp_replace")
-            && sql.contains("IN (?, ?)")),
+            && sql.contains("IN (?, ?)")
+            && sql.split("l\\.consentimento_contato = true", -1).length == 3),
             eq("5511999999999"), eq("11999999999"), eq("5511999999999"),
             eq("5511999999999"), eq("11999999999"));
     }
