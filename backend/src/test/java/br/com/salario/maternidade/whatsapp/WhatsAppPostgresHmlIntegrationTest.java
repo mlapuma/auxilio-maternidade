@@ -122,6 +122,37 @@ class WhatsAppPostgresHmlIntegrationTest {
                     assertTrue(rs.next(), "PostgreSQL could not plan the actual outbox claim");
                 }
 
+                // No two messages should be in flight for the same recipient.
+                // Return only an aggregate count; never expose phone numbers.
+                try (Statement statement = connection.createStatement();
+                     ResultSet rs = statement.executeQuery("""
+                         SELECT COUNT(*) FROM (
+                             SELECT telefone
+                               FROM whatsapp_outbox
+                              WHERE status = 'ENVIANDO'
+                              GROUP BY telefone
+                             HAVING COUNT(*) > 1
+                         ) duplicated
+                         """)) {
+                    assertTrue(rs.next());
+                    assertEquals(0L, rs.getLong(1),
+                        "Multiple active sends exist for the same recipient");
+                }
+
+                // Detect operational anomalies before enabling outbound sends.
+                try (Statement statement = connection.createStatement();
+                     ResultSet rs = statement.executeQuery("""
+                         SELECT COUNT(*) FROM whatsapp_outbox
+                          WHERE (status = 'ENVIANDO'
+                                 AND atualizado_em < CURRENT_TIMESTAMP - INTERVAL '10 minutes')
+                             OR (status = 'PENDENTE'
+                                 AND criado_em < CURRENT_TIMESTAMP - INTERVAL '23 hours')
+                         """)) {
+                    assertTrue(rs.next());
+                    assertEquals(0L, rs.getLong(1),
+                        "Stuck or expired outbox messages require operational cleanup");
+                }
+
                 try (Statement statement = connection.createStatement();
                      ResultSet rs = statement.executeQuery("""
                          SELECT COUNT(*) FROM whatsapp_conversations
