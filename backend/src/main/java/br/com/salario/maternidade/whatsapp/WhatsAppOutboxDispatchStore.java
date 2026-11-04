@@ -55,8 +55,10 @@ public class WhatsAppOutboxDispatchStore {
                 JOIN whatsapp_conversations c ON c.telefone = o.telefone
                 WHERE o.status = 'PENDENTE'
                   AND o.criado_em >= CURRENT_TIMESTAMP - INTERVAL '23 hours'
-                  AND c.consentimento = true
-                  AND c.etapa <> 'STOPPED'
+                  AND ((o.tipo_resposta = 'STANDARD'
+                        AND c.consentimento = true AND c.etapa <> 'STOPPED')
+                    OR (o.tipo_resposta = 'CONSENT_REQUEST'
+                        AND c.consentimento = false AND c.etapa = 'CONSENT'))
                 ORDER BY o.criado_em, o.id
                 FOR UPDATE OF o SKIP LOCKED
                 LIMIT 1
