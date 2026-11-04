@@ -26,11 +26,10 @@ public class WhatsAppConversationProcessor {
             consent = true;
         }
         if (transition.nextStep() == WhatsAppConversationFlow.Step.STOPPED) {
-            store.deleteByPhone(message.sender());
-        } else {
-            store.save(new WhatsAppConversationStore.Conversation(
-                message.sender(), transition.nextStep(), consent));
+            consent = false;
         }
+        store.save(new WhatsAppConversationStore.Conversation(
+            message.sender(), transition.nextStep(), consent));
         return transition;
     }
 }
