@@ -95,6 +95,16 @@ public class WhatsAppConversationStore {
             """, phone, national, phone, phone, national);
     }
 
+    /** Cancels unsent replies when consent is revoked or the flow restarts. */
+    public int cancelPendingReplies(String phone) {
+        validatePhone(phone);
+        return jdbc.update("""
+            UPDATE whatsapp_outbox
+               SET status = 'CANCELADO', atualizado_em = CURRENT_TIMESTAMP
+             WHERE telefone = ? AND status = 'PENDENTE'
+            """, phone);
+    }
+
     public void deleteByPhone(String phone) {
         validatePhone(phone);
         jdbc.update("DELETE FROM whatsapp_conversations WHERE telefone = ?", phone);
