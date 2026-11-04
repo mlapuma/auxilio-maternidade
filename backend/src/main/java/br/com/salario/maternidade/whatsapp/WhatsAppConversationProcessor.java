@@ -45,6 +45,7 @@ public class WhatsAppConversationProcessor {
                 || (current.step() == WhatsAppConversationFlow.Step.STOPPED
                     && transition.nextStep() == WhatsAppConversationFlow.Step.CONSENT)) {
             store.clearScreeningAnswers(message.sender());
+            store.unlinkLead(message.sender());
             store.cancelPendingReplies(message.sender());
         } else if (consent && current.step() == WhatsAppConversationFlow.Step.BIRTH
                 && transition.nextStep() == WhatsAppConversationFlow.Step.WORK) {
