@@ -56,17 +56,17 @@
       @if (carregando()) { <p role="status">Carregando...</p> }
       <div class="tabela-scroll">
         <table>
-          <thead><tr><th>Protocolo</th><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Status</th><th>Cadastro</th><th>Questionário</th><th>Histórico</th></tr></thead>
+          <thead><tr><th>Protocolo</th><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Status</th><th>Cadastro</th><th>Questionário</th><th>Histórico</th><th>WhatsApp</th></tr></thead>
           <tbody>
             @for (lead of registrosFiltrados; track lead.id) {
-              <tr [class.linha-selecionada]="leadDetalhado()?.id === lead.id"><td>{{ lead.protocolo }}</td><td>{{ lead.nome }}</td><td>{{ lead.telefone }}</td><td>{{ lead.email || '—' }}</td><td><select [name]="'status-' + lead.id" [ngModel]="lead.status" (ngModelChange)="atualizarStatus(lead, $event)" [disabled]="!!salvandoId() || carregando()" [attr.aria-label]="'Status do atendimento ' + lead.protocolo"><option value="NOVO">Novo</option><option value="EM_ATENDIMENTO">Em atendimento</option><option value="CONCLUIDO">Concluído</option></select></td><td>{{ lead.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td><td><button type="button" (click)="consultarTriagens(lead)" [class.ativo]="leadDetalhado()?.id === lead.id && tipoDetalhe() === 'triagens'" [disabled]="carregandoTriagens() && leadDetalhado()?.id === lead.id && tipoDetalhe() === 'triagens'">Ver respostas</button></td><td><button type="button" (click)="consultarHistorico(lead)" [class.ativo]="leadDetalhado()?.id === lead.id && tipoDetalhe() === 'historico'" [disabled]="carregandoHistorico() && leadDetalhado()?.id === lead.id && tipoDetalhe() === 'historico'">Ver histórico</button></td></tr>
-            } @empty { <tr><td colspan="8">Nenhum cadastro encontrado nesta página.</td></tr> }
+              <tr [class.linha-selecionada]="leadDetalhado()?.id === lead.id"><td>{{ lead.protocolo }}</td><td>{{ lead.nome }}</td><td>{{ lead.telefone }}</td><td>{{ lead.email || '—' }}</td><td><select [name]="'status-' + lead.id" [ngModel]="lead.status" (ngModelChange)="atualizarStatus(lead, $event)" [disabled]="!!salvandoId() || carregando()" [attr.aria-label]="'Status do atendimento ' + lead.protocolo"><option value="NOVO">Novo</option><option value="EM_ATENDIMENTO">Em atendimento</option><option value="CONCLUIDO">Concluído</option></select></td><td>{{ lead.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td><td><button type="button" (click)="consultarTriagens(lead)" [class.ativo]="leadDetalhado()?.id === lead.id && tipoDetalhe() === 'triagens'" [disabled]="carregandoTriagens() && leadDetalhado()?.id === lead.id && tipoDetalhe() === 'triagens'">Ver respostas</button></td><td><button type="button" (click)="consultarHistorico(lead)" [class.ativo]="leadDetalhado()?.id === lead.id && tipoDetalhe() === 'historico'" [disabled]="carregandoHistorico() && leadDetalhado()?.id === lead.id && tipoDetalhe() === 'historico'">Ver histórico</button></td><td><button type="button" (click)="consultarWhatsApp(lead)" [class.ativo]="leadDetalhado()?.id === lead.id && tipoDetalhe() === 'whatsapp'">Ver conversa</button></td></tr>
+            } @empty { <tr><td colspan="9">Nenhum cadastro encontrado nesta página.</td></tr> }
           </tbody>
         </table>
       </div>
       @if (leadDetalhado(); as selecionado) {
-        <section class="detalhes" [attr.aria-label]="tipoDetalhe() === 'triagens' ? 'Respostas do questionário' : 'Histórico do atendimento'">
-          <div class="barra"><h3>{{ tipoDetalhe() === 'triagens' ? 'Questionário' : 'Histórico' }} — {{ selecionado.nome }} ({{ selecionado.protocolo }})</h3><button type="button" (click)="fecharDetalhes()">Fechar</button></div>
+        <section class="detalhes" [attr.aria-label]="tipoDetalhe() === 'triagens' ? 'Respostas do questionário' : tipoDetalhe() === 'whatsapp' ? 'Conversa WhatsApp' : 'Histórico do atendimento'">
+          <div class="barra"><h3>{{ tipoDetalhe() === 'triagens' ? 'Questionário' : tipoDetalhe() === 'whatsapp' ? 'WhatsApp' : 'Histórico' }} — {{ selecionado.nome }} ({{ selecionado.protocolo }})</h3><button type="button" (click)="fecharDetalhes()">Fechar</button></div>
           @if (tipoDetalhe() === 'triagens') {
           @if (carregandoTriagens()) { <p role="status">Carregando respostas...</p> }
           @for (triagem of triagens(); track triagem.id) {
@@ -99,6 +99,30 @@
               @if (!carregandoHistorico() && historicoConsultado()) { <p>Nenhuma alteração registrada.</p> }
             }
           </div>
+          }
+          @if (tipoDetalhe() === 'whatsapp') {
+            @if (whatsappHistoricoCarregando()) { <p role="status">Carregando conversa WhatsApp...</p> }
+            @if (whatsappHistoricoErro()) { <p role="alert" class="erro">{{ whatsappHistoricoErro() }}</p> }
+            @if (conversaWhatsApp(); as conversa) {
+              <div class="whatsapp-conversa">
+                <p><strong>Etapa:</strong> {{ conversa.step }} · <strong>Consentimento:</strong> {{ conversa.consent ? 'Ativo' : 'Inativo' }}</p>
+                @if (respostasWhatsApp().length) {
+                  <h4>Respostas da triagem WhatsApp</h4>
+                  @for (item of respostasWhatsApp(); track item.pergunta) {
+                    <p><strong>{{ item.pergunta }}:</strong> {{ item.resposta }}</p>
+                  }
+                }
+                <h4>Últimas mensagens (até 50)</h4>
+                @for (mensagem of conversa.messages; track mensagem.id) {
+                  <article [class.saida]="mensagem.direction === 'SAIDA'">
+                    <p><strong>{{ mensagem.direction === 'SAIDA' ? 'Escritório' : 'Cliente' }}</strong> · {{ mensagem.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+                    <p class="mensagem-conteudo">{{ mensagem.content }}</p>
+                  </article>
+                } @empty { <p>Nenhuma mensagem registrada nesta conversa.</p> }
+              </div>
+            } @else if (whatsappHistoricoConsultado() && !whatsappHistoricoErro()) {
+              <p>Nenhuma conversa WhatsApp vinculada a este atendimento.</p>
+            }
           }
           <p class="aviso">A classificação é apenas preliminar e não substitui avaliação jurídica.</p>
         </section>
