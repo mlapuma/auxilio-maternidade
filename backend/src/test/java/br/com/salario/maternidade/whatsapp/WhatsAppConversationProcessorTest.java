@@ -27,6 +27,8 @@ class WhatsAppConversationProcessorTest {
         processor.process(new WhatsAppInboundMessage("wamid.2", PHONE, "sim"));
         verify(store).save(new WhatsAppConversationStore.Conversation(
             PHONE, WhatsAppConversationFlow.Step.BIRTH, true));
+        verify(store).cancelPendingConsentRequests(PHONE);
+        verify(store, never()).cancelPendingReplies(PHONE);
     }
 
     @Test
