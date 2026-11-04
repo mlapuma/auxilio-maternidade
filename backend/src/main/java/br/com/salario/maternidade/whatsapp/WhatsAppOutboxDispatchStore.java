@@ -20,6 +20,19 @@ public class WhatsAppOutboxDispatchStore {
         this.jdbc = jdbc;
     }
 
+    /**
+     * Expires replies older than the conservative dispatch window.
+     * They must not remain indefinitely pending or be sent after a restart.
+     */
+    public int expireStalePendingReplies() {
+        return jdbc.update("""
+            UPDATE whatsapp_outbox
+               SET status = 'EXPIRADO', atualizado_em = CURRENT_TIMESTAMP
+             WHERE status = 'PENDENTE'
+               AND criado_em < CURRENT_TIMESTAMP - INTERVAL '23 hours'
+            """);
+    }
+
     public Optional<PendingReply> claimOne() {
         return jdbc.query("""
             UPDATE whatsapp_outbox SET status = 'ENVIANDO',
