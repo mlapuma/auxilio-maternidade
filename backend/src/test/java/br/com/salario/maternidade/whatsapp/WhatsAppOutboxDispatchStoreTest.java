@@ -79,7 +79,9 @@ class WhatsAppOutboxDispatchStoreTest {
             && sql.contains("o.tipo_resposta = 'CONSENT_REQUEST'")
             && sql.contains("c.consentimento = false AND c.etapa = 'CONSENT'")
             && sql.contains("o.status = 'PENDENTE'")
-            && sql.contains("FOR UPDATE OF o SKIP LOCKED")
+            && sql.contains("FOR UPDATE OF o, c SKIP LOCKED")
+            && sql.contains("active.telefone = o.telefone")
+            && sql.contains("active.status = 'ENVIANDO'")
             && sql.contains("INTERVAL '23 hours'")),
             any(org.springframework.jdbc.core.ResultSetExtractor.class));
     }
