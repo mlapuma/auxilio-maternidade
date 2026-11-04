@@ -8,6 +8,38 @@ import static org.mockito.Mockito.*;
 
 class WhatsAppOutboxDispatchStoreTest {
     @Test
+    void rechecksConsentAndStatusBeforeExternalSend() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        var store = new WhatsAppOutboxDispatchStore(jdbc);
+        UUID id = UUID.randomUUID();
+        when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(id))).thenReturn(true);
+
+        org.junit.jupiter.api.Assertions.assertTrue(store.stillEligible(id));
+
+        verify(jdbc).queryForObject(
+            org.mockito.ArgumentMatchers.<String>argThat(sql ->
+                sql.contains("o.status = 'ENVIANDO'")
+                && sql.contains("c.consentimento = true")
+                && sql.contains("c.consentimento = false AND c.etapa = 'CONSENT'")),
+            eq(Boolean.class), eq(id));
+    }
+
+    @Test
+    void cancelClaimedReplyChangesOnlySendingState() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        var store = new WhatsAppOutboxDispatchStore(jdbc);
+        UUID id = UUID.randomUUID();
+
+        store.cancelClaimedReply(id);
+
+        verify(jdbc).update(
+            org.mockito.ArgumentMatchers.<String>argThat(sql ->
+                sql.contains("status = 'CANCELADO'")
+                && sql.contains("status = 'ENVIANDO'")),
+            eq(id));
+    }
+
+    @Test
     void flagsOrphanedSendingWithoutRetrying() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         var store = new WhatsAppOutboxDispatchStore(jdbc);
