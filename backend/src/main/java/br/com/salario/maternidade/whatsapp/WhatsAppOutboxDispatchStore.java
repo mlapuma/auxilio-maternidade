@@ -25,11 +25,14 @@ public class WhatsAppOutboxDispatchStore {
             UPDATE whatsapp_outbox SET status = 'ENVIANDO',
                 tentativas = tentativas + 1, atualizado_em = CURRENT_TIMESTAMP
             WHERE id = (
-                SELECT id FROM whatsapp_outbox
-                WHERE status = 'PENDENTE'
-                  AND criado_em >= CURRENT_TIMESTAMP - INTERVAL '23 hours'
-                ORDER BY criado_em, id
-                FOR UPDATE SKIP LOCKED
+                SELECT o.id FROM whatsapp_outbox o
+                JOIN whatsapp_conversations c ON c.telefone = o.telefone
+                WHERE o.status = 'PENDENTE'
+                  AND o.criado_em >= CURRENT_TIMESTAMP - INTERVAL '23 hours'
+                  AND c.consentimento = true
+                  AND c.etapa <> 'STOPPED'
+                ORDER BY o.criado_em, o.id
+                FOR UPDATE OF o SKIP LOCKED
                 LIMIT 1
             )
             RETURNING id, telefone, corpo
