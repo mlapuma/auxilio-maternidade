@@ -62,6 +62,19 @@ public class WhatsAppConversationStore {
             """, key, value, phone);
     }
 
+    /**
+     * Remove the conversation-to-lead association on opt-out or restart.
+     * A new session may link a lead again only after renewed consent.
+     */
+    public void unlinkLead(String phone) {
+        validatePhone(phone);
+        jdbc.update("""
+            UPDATE whatsapp_conversations
+               SET lead_id = NULL, atualizado_em = CURRENT_TIMESTAMP
+             WHERE telefone = ?
+            """, phone);
+    }
+
     public void clearScreeningAnswers(String phone) {
         validatePhone(phone);
         jdbc.update("""
