@@ -44,6 +44,7 @@ class WhatsAppConversationProcessorTest {
         verify(store).save(new WhatsAppConversationStore.Conversation(
             PHONE, WhatsAppConversationFlow.Step.BIRTH, true));
         verify(store).cancelPendingConsentRequests(PHONE);
+        verify(store).cancelPendingStandardReplies(PHONE);
         verify(store, never()).cancelPendingReplies(PHONE);
     }
 
@@ -76,6 +77,7 @@ class WhatsAppConversationProcessorTest {
         processor.process(new WhatsAppInboundMessage("wamid.6", PHONE, "NÃO SEI"));
         verify(store).saveScreeningAnswer(PHONE, "situacao_bebe", "GESTANTE");
         verify(store).saveScreeningAnswer(PHONE, "situacao_trabalho", "NAO_SEI");
+        verify(store, times(2)).cancelPendingStandardReplies(PHONE);
     }
 
     @Test
@@ -86,6 +88,7 @@ class WhatsAppConversationProcessorTest {
         verify(store).clearScreeningAnswers(PHONE);
         verify(store).unlinkLead(PHONE);
         verify(store).cancelPendingReplies(PHONE);
+        verify(store, never()).cancelPendingStandardReplies(PHONE);
         verify(store, never()).deleteByPhone(anyString());
     }
     @Test
