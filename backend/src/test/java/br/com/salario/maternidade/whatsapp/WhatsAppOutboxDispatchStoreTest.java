@@ -8,6 +8,19 @@ import static org.mockito.Mockito.*;
 
 class WhatsAppOutboxDispatchStoreTest {
     @Test
+    void flagsOrphanedSendingWithoutRetrying() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        var store = new WhatsAppOutboxDispatchStore(jdbc);
+
+        store.flagStuckSendingForReview();
+
+        verify(jdbc).update(org.mockito.ArgumentMatchers.<String>argThat(sql ->
+            sql.contains("status = 'REVISAR'")
+            && sql.contains("status = 'ENVIANDO'")
+            && sql.contains("atualizado_em < CURRENT_TIMESTAMP - INTERVAL '10 minutes'")));
+    }
+
+    @Test
     void expiresOnlyOldPendingReplies() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         var store = new WhatsAppOutboxDispatchStore(jdbc);
