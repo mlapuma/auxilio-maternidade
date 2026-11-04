@@ -55,6 +55,9 @@ public class WhatsAppConversationProcessor {
             store.saveScreeningAnswer(message.sender(), "situacao_trabalho", normalize(message.text()));
         }
         if (consent && transition.nextStep() != WhatsAppConversationFlow.Step.STOPPED) {
+            // New inbound messages make older, unsent triage prompts obsolete.
+            // The webhook enqueues the new response after this transaction step.
+            store.cancelPendingStandardReplies(message.sender());
             store.linkUniqueExistingLead(message.sender());
         }
         return transition;
