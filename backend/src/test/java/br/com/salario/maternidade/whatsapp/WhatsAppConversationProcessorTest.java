@@ -16,6 +16,7 @@ class WhatsAppConversationProcessorTest {
         var transition = processor.process(new WhatsAppInboundMessage("wamid.1", PHONE, "Oi"));
         assertEquals(WhatsAppConversationFlow.Step.CONSENT, transition.nextStep());
         verify(store, never()).cancelPendingReplies(PHONE);
+        verify(store, never()).unlinkLead(PHONE);
         verify(store).save(new WhatsAppConversationStore.Conversation(
             PHONE, WhatsAppConversationFlow.Step.CONSENT, false));
     }
@@ -62,6 +63,7 @@ class WhatsAppConversationProcessorTest {
         var transition = processor.process(new WhatsAppInboundMessage("wamid.4", PHONE, "INICIAR"));
         assertEquals(WhatsAppConversationFlow.Step.CONSENT, transition.nextStep());
         verify(store).cancelPendingReplies(PHONE);
+        verify(store).unlinkLead(PHONE);
         verify(store).save(new WhatsAppConversationStore.Conversation(
             PHONE, WhatsAppConversationFlow.Step.CONSENT, false));
     }
@@ -82,6 +84,7 @@ class WhatsAppConversationProcessorTest {
             new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.WORK, true)));
         processor.process(new WhatsAppInboundMessage("wamid.7", PHONE, "SAIR"));
         verify(store).clearScreeningAnswers(PHONE);
+        verify(store).unlinkLead(PHONE);
         verify(store).cancelPendingReplies(PHONE);
         verify(store, never()).deleteByPhone(anyString());
     }
