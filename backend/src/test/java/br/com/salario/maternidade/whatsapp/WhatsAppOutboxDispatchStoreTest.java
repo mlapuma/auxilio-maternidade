@@ -99,7 +99,7 @@ class WhatsAppOutboxDispatchStoreTest {
             sql.contains("INSERT INTO whatsapp_message_history")
             && sql.contains("c.consentimento = true")
             && sql.contains("o.status = 'ENVIADO'")
-            && sql.contains("ON CONFLICT (mensagem_externa_id) DO NOTHING")),
+            && sql.contains("ON CONFLICT (mensagem_externa_id) WHERE mensagem_externa_id IS NOT NULL DO NOTHING")),
             any(), eq(id));
     }
 
