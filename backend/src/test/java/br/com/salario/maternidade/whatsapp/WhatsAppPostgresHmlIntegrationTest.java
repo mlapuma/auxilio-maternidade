@@ -153,7 +153,7 @@ class WhatsAppPostgresHmlIntegrationTest {
                      WHERE o.id = '00000000-0000-0000-0000-000000000000'::uuid
                        AND o.status = 'ENVIADO'
                        AND c.consentimento = true AND c.etapa <> 'STOPPED'
-                    ON CONFLICT (mensagem_externa_id) DO NOTHING
+                    ON CONFLICT (mensagem_externa_id) WHERE mensagem_externa_id IS NOT NULL DO NOTHING
                     """
                 };
                 for (String sql : dispatchStatements) {
