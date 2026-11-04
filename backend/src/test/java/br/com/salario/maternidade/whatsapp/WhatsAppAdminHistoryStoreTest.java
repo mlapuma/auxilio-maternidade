@@ -27,7 +27,7 @@ class WhatsAppAdminHistoryStoreTest {
                 when(rs.getString("respostas")).thenReturn("{}");
                 @SuppressWarnings("unchecked")
                 RowMapper<Object[]> mapper = invocation.getArgument(1);
-                return List.of(mapper.mapRow(rs, 0));
+                return java.util.Collections.singletonList(mapper.mapRow(rs, 0));
             });
         when(jdbc.query(anyString(), any(RowMapper.class), eq(conversationId), eq(50)))
             .thenAnswer(invocation -> {
