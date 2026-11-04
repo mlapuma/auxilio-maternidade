@@ -41,8 +41,11 @@ public class WhatsAppConversationFlow {
             };
             case HANDOFF -> new Transition(Step.HANDOFF,
                 "Seu atendimento aguarda avaliação da equipe. Digite SAIR para encerrar.", true);
-            case STOPPED -> new Transition(Step.STOPPED,
-                "Atendimento encerrado. Para iniciar novamente, solicite um novo atendimento.", false);
+            case STOPPED -> "iniciar".equals(input) || "recomeçar".equals(input) || "recomecar".equals(input)
+                ? new Transition(Step.CONSENT,
+                    "Vamos iniciar um novo atendimento. Podemos registrar suas respostas para encaminhar sua solicitação à equipe? Responda SIM ou NÃO.", false)
+                : new Transition(Step.STOPPED,
+                    "Atendimento encerrado. Digite INICIAR para solicitar um novo atendimento.", false);
         };
     }
 }
