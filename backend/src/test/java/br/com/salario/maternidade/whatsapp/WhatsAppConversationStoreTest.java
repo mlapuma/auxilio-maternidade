@@ -11,6 +11,23 @@ class WhatsAppConversationStoreTest {
     private final WhatsAppConversationStore store = new WhatsAppConversationStore(jdbc);
 
     @Test
+    void unlinkLeadOnlyClearsConversationAssociation() {
+        org.springframework.jdbc.core.JdbcTemplate jdbc =
+            org.mockito.Mockito.mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        var store = new WhatsAppConversationStore(jdbc);
+
+        store.unlinkLead("5511999999999");
+
+        org.mockito.Mockito.verify(jdbc).update(
+            org.mockito.ArgumentMatchers.<String>argThat(sql ->
+                sql.contains("UPDATE whatsapp_conversations")
+                && sql.contains("SET lead_id = NULL")
+                && sql.contains("WHERE telefone = ?")
+                && !sql.contains("DELETE")),
+            org.mockito.ArgumentMatchers.eq("5511999999999"));
+    }
+
+    @Test
     void cancelsOnlyPendingConsentRequests() {
         org.springframework.jdbc.core.JdbcTemplate jdbc =
             org.mockito.Mockito.mock(org.springframework.jdbc.core.JdbcTemplate.class);
