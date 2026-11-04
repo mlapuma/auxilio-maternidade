@@ -88,7 +88,8 @@ public class WhatsAppWebhookService {
                         historyStore.recordInbound(message);
                     }
                     if (replyOutbox != null) {
-                        replyOutbox.enqueue(message.messageId(), message.sender(), transition.reply());
+                        replyOutbox.enqueue(message.messageId(), message.sender(), transition.reply(),
+                            transition.nextStep() == WhatsAppConversationFlow.Step.CONSENT);
                     }
                 }
             }
