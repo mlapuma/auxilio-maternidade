@@ -39,6 +39,8 @@ class WhatsAppConversationFlowTest {
     void stopCommandWorksFromEveryStep() {
         for (var step : WhatsAppConversationFlow.Step.values()) {
             assertEquals(STOPPED, flow.next(step, "SAIR").nextStep());
+            assertEquals(STOPPED, flow.next(step, "STOP").nextStep());
+            assertEquals(STOPPED, flow.next(step, "unsubscribe").nextStep());
         }
     }
     @Test
