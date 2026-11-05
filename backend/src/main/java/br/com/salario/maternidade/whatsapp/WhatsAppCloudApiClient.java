@@ -57,6 +57,11 @@ public class WhatsAppCloudApiClient {
         }
     }
 
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void verifyMetaAtStartup() {
+        if (enabled) checkMetaCredentials();
+    }
+
     /** Read-only diagnostic; never sends a WhatsApp message. */
     public boolean checkMetaCredentials() {
         if (token == null || token.isBlank() || phoneNumberId == null || !phoneNumberId.matches("[0-9]+")) {
