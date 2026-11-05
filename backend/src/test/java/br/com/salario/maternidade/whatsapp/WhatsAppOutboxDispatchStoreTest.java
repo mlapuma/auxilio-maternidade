@@ -12,7 +12,7 @@ class WhatsAppOutboxDispatchStoreTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         var store = new WhatsAppOutboxDispatchStore(jdbc);
         UUID id = UUID.randomUUID();
-        when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(id))).thenReturn(true);
+        when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(id), eq(""), eq(""))).thenReturn(true);
 
         org.junit.jupiter.api.Assertions.assertTrue(store.stillEligible(id));
 
@@ -21,7 +21,7 @@ class WhatsAppOutboxDispatchStoreTest {
                 sql.contains("o.status = 'ENVIANDO'")
                 && sql.contains("c.consentimento = true")
                 && sql.contains("c.consentimento = false AND c.etapa = 'CONSENT'")),
-            eq(Boolean.class), eq(id));
+            eq(Boolean.class), eq(id), eq(""), eq(""));
     }
 
     @Test
@@ -83,7 +83,7 @@ class WhatsAppOutboxDispatchStoreTest {
             && sql.contains("active.telefone = o.telefone")
             && sql.contains("active.status = 'ENVIANDO'")
             && sql.contains("INTERVAL '23 hours'")),
-            any(org.springframework.jdbc.core.ResultSetExtractor.class));
+            any(org.springframework.jdbc.core.ResultSetExtractor.class), eq(""), eq(""));
     }
 
     @Test
