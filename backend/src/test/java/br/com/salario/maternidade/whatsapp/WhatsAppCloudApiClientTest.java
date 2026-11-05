@@ -10,6 +10,30 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class WhatsAppCloudApiClientTest {
     @Test
+    void readOnlyCredentialCheckUsesMetaGet() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://graph.facebook.com/v23.0/123456?fields=id"))
+            .andExpect(method(org.springframework.http.HttpMethod.GET))
+            .andExpect(header("Authorization", "Bearer test-token"))
+            .andRespond(withSuccess("{\\"id\\":\\"123456\\"}", MediaType.APPLICATION_JSON));
+        var client = new WhatsAppCloudApiClient(builder, "test-token", "123456", "v23.0", false);
+        assertTrue(client.checkMetaCredentials());
+        server.verify();
+    }
+
+    @Test
+    void readOnlyCredentialCheckReportsUnauthorized() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://graph.facebook.com/v23.0/123456?fields=id"))
+            .andRespond(withUnauthorizedRequest());
+        var client = new WhatsAppCloudApiClient(builder, "bad-token", "123456", "v23.0", false);
+        assertFalse(client.checkMetaCredentials());
+        server.verify();
+    }
+
+    @Test
     void disabledByDefaultPreventsRequests() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

@@ -57,6 +57,27 @@ public class WhatsAppCloudApiClient {
         }
     }
 
+    /** Read-only diagnostic; never sends a WhatsApp message. */
+    public boolean checkMetaCredentials() {
+        if (token == null || token.isBlank() || phoneNumberId == null || !phoneNumberId.matches("[0-9]+")) {
+            log.error("WhatsApp Meta credential check: result=INVALID_LOCAL_CONFIGURATION");
+            return false;
+        }
+        try {
+            client.get().uri("/{phoneNumberId}?fields=id", phoneNumberId)
+                .headers(headers -> headers.setBearerAuth(token.trim()))
+                .retrieve().toBodilessEntity();
+            log.info("WhatsApp Meta credential check: result=OK");
+            return true;
+        } catch (org.springframework.web.client.RestClientResponseException ex) {
+            log.error("WhatsApp Meta credential check: result=HTTP_ERROR, httpStatus={}", ex.getStatusCode().value());
+            return false;
+        } catch (RuntimeException ex) {
+            log.error("WhatsApp Meta credential check: result=ERROR, exceptionType={}", ex.getClass().getSimpleName());
+            return false;
+        }
+    }
+
     public void sendText(String recipient, String body) {
         if (!enabled) throw new IllegalStateException("WhatsApp sending is disabled");
         if (token.isBlank() || phoneNumberId.isBlank()) {
@@ -76,7 +97,7 @@ public class WhatsAppCloudApiClient {
         }
         client.post()
             .uri("/{phoneNumberId}/messages", phoneNumberId)
-            .headers(headers -> headers.setBearerAuth(token))
+            .headers(headers -> headers.setBearerAuth(token.trim()))
             .contentType(MediaType.APPLICATION_JSON)
             .body(Map.of(
                 "messaging_product", "whatsapp",
