@@ -1,6 +1,8 @@
 package br.com.salario.maternidade.whatsapp;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WhatsAppWebhookService {
+    private static final Logger log = LoggerFactory.getLogger(WhatsAppWebhookService.class);
     private final ObjectMapper mapper;
     private final JdbcTemplate jdbc;
     private final WhatsAppInboundMessageParser inboundParser;
@@ -65,19 +68,32 @@ public class WhatsAppWebhookService {
             throw new IllegalArgumentException("Missing webhook entries");
         }
         java.util.Set<String> insertedMessageIds = new java.util.HashSet<>();
+        int messagesSeen = 0;
+        int statusesSeen = 0;
+        int inserted = 0;
         for (JsonNode entry : root.path("entry")) {
             for (JsonNode change : entry.path("changes")) {
                 JsonNode value = change.path("value");
                 for (JsonNode message : value.path("messages")) {
+                    messagesSeen++;
                     String id = message.path("id").asText();
-                    if (!id.isBlank() && saveEvent(id, "MENSAGEM")) insertedMessageIds.add(id);
+                    if (!id.isBlank() && saveEvent(id, "MENSAGEM")) {
+                        insertedMessageIds.add(id);
+                        inserted++;
+                    }
                 }
                 for (JsonNode status : value.path("statuses")) {
+                    statusesSeen++;
                     String id = status.path("id").asText();
                     String state = status.path("status").asText();
-                    if (!id.isBlank() && !state.isBlank()) saveEvent(id + ":" + state, "STATUS");
+                    if (!id.isBlank() && !state.isBlank() && saveEvent(id + ":" + state, "STATUS")) inserted++;
                 }
             }
+        }
+        log.info("WhatsApp webhook parsed: messages={}, statuses={}, newEvents={}, ignoredOrDuplicate={}",
+                messagesSeen, statusesSeen, inserted, messagesSeen + statusesSeen - inserted);
+        if (messagesSeen == 0 && statusesSeen == 0) {
+            log.info("WhatsApp webhook contained no message or status events; no database rows expected");
         }
         if (inboundParser != null && conversationProcessor != null) {
             for (WhatsAppInboundMessage message : inboundParser.parse(payload)) {
