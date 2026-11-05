@@ -15,7 +15,8 @@ public class WhatsAppConversationFlow {
 
     public Transition next(Step step, String answer) {
         String input = answer == null ? "" : answer.strip().toLowerCase(Locale.ROOT);
-        if ("sair".equals(input) || "parar".equals(input) || "cancelar".equals(input)) {
+        if ("sair".equals(input) || "parar".equals(input) || "cancelar".equals(input)
+                || "stop".equals(input) || "unsubscribe".equals(input)) {
             return new Transition(Step.STOPPED,
                 "Atendimento automático encerrado. Você pode solicitar novo contato quando desejar.", false);
         }
