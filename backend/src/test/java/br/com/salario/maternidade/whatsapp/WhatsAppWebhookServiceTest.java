@@ -39,6 +39,12 @@ class WhatsAppWebhookServiceTest {
     }
 
     @Test
+    void aceitaNotificacaoSemMensagemOuStatusSemInserirRegistro() throws Exception {
+        service.accept("{\"object\":\"whatsapp_business_account\",\"entry\":[{\"changes\":[{\"field\":\"messages\",\"value\":{}}]}]}");
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
     void registraAtualizacaoDeStatus() throws Exception {
         service.accept("{\"object\":\"whatsapp_business_account\",\"entry\":[{\"changes\":[{\"value\":{\"statuses\":[{\"id\":\"wamid.123\",\"status\":\"delivered\"}]}}]}]}");
         verify(jdbc).update(contains("ON CONFLICT"), any(), eq("wamid.123:delivered"), eq("STATUS"), any(), eq("RECEBIDO"));
