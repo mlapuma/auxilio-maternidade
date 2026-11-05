@@ -3,6 +3,7 @@ package br.com.salario.maternidade.whatsapp;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,10 @@ public class WhatsAppOutboxDispatchStore {
     public record PendingReply(UUID id, String phone, String body) {}
 
     private final JdbcTemplate jdbc;
+
+    /** Optional recipient restriction for controlled staging dispatch. */
+    @Value("${WHATSAPP_OUTBOX_TARGET_PHONE:}")
+    private String targetPhone = "";
 
     public WhatsAppOutboxDispatchStore(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
@@ -55,6 +60,7 @@ public class WhatsAppOutboxDispatchStore {
                 JOIN whatsapp_conversations c ON c.telefone = o.telefone
                 WHERE o.status = 'PENDENTE'
                   AND o.criado_em >= CURRENT_TIMESTAMP - INTERVAL '23 hours'
+                  AND (? = '' OR o.telefone = ?)
                   -- Do not dispatch two replies to the same recipient concurrently.
                   -- A previously claimed reply may still be in flight at Meta.
                   AND NOT EXISTS (
@@ -76,7 +82,8 @@ public class WhatsAppOutboxDispatchStore {
                     (UUID) rs.getObject("id"),
                     rs.getString("telefone"),
                     rs.getString("corpo")))
-                : Optional.empty());
+                : Optional.empty(), targetPhone == null ? "" : targetPhone,
+                targetPhone == null ? "" : targetPhone);
     }
 
     /**
@@ -91,12 +98,14 @@ public class WhatsAppOutboxDispatchStore {
                 JOIN whatsapp_conversations c ON c.telefone = o.telefone
                 WHERE o.id = ? AND o.status = 'ENVIANDO'
                   AND o.criado_em >= CURRENT_TIMESTAMP - INTERVAL '23 hours'
+                  AND (? = '' OR o.telefone = ?)
                   AND ((o.tipo_resposta = 'STANDARD'
                         AND c.consentimento = true AND c.etapa <> 'STOPPED')
                     OR (o.tipo_resposta = 'CONSENT_REQUEST'
                         AND c.consentimento = false AND c.etapa = 'CONSENT'))
             )
-            """, Boolean.class, id);
+            """, Boolean.class, id, targetPhone == null ? "" : targetPhone,
+                targetPhone == null ? "" : targetPhone);
         return Boolean.TRUE.equals(eligible);
     }
 
