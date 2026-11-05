@@ -1,6 +1,9 @@
 package br.com.salario.maternidade.whatsapp;
 
 import java.util.Map;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -12,6 +15,7 @@ import org.springframework.web.client.RestClient;
  */
 @Component
 public class WhatsAppCloudApiClient {
+    private static final Logger log = LoggerFactory.getLogger(WhatsAppCloudApiClient.class);
     private final RestClient client;
     private final String token;
     private final String phoneNumberId;
@@ -33,6 +37,24 @@ public class WhatsAppCloudApiClient {
         this.token = token;
         this.phoneNumberId = phoneNumberId;
         this.enabled = enabled;
+    }
+
+    /** Report configuration problems at startup without exposing secrets or sending messages. */
+    @PostConstruct
+    public void diagnoseConfiguration() {
+        boolean tokenPresent = token != null && !token.isBlank();
+        boolean phoneIdValid = phoneNumberId != null && phoneNumberId.matches("[0-9]+");
+        boolean targetValid = targetPhone == null || targetPhone.isBlank()
+            || targetPhone.matches("[1-9][0-9]{7,14}");
+        log.info("WhatsApp Cloud API configuration: sendingEnabled={}, tokenPresent={}, phoneNumberIdValid={}, targetPhoneConfigured={}, targetPhoneValid={}",
+            enabled, tokenPresent, phoneIdValid,
+            targetPhone != null && !targetPhone.isBlank(), targetValid);
+        if (enabled && (!tokenPresent || !phoneIdValid || !targetValid)) {
+            log.error("WhatsApp Cloud API configuration invalid: check WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_OUTBOX_TARGET_PHONE in the active Eclipse launch environment");
+        }
+        if (enabled && (targetPhone == null || targetPhone.isBlank())) {
+            log.warn("WhatsApp Cloud API test recipient restriction is not configured; set WHATSAPP_OUTBOX_TARGET_PHONE for controlled tests");
+        }
     }
 
     public void sendText(String recipient, String body) {
