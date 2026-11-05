@@ -16,7 +16,7 @@ class WhatsAppCloudApiClientTest {
         server.expect(requestTo("https://graph.facebook.com/v23.0/123456?fields=id"))
             .andExpect(method(org.springframework.http.HttpMethod.GET))
             .andExpect(header("Authorization", "Bearer test-token"))
-            .andRespond(withSuccess("{\\"id\\":\\"123456\\"}", MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess("{\"id\":\"123456\"}", MediaType.APPLICATION_JSON));
         var client = new WhatsAppCloudApiClient(builder, "test-token", "123456", "v23.0", false);
         assertTrue(client.checkMetaCredentials());
         server.verify();
