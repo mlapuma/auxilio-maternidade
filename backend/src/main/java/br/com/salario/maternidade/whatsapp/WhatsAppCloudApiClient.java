@@ -17,6 +17,10 @@ public class WhatsAppCloudApiClient {
     private final String phoneNumberId;
     private final boolean enabled;
 
+    /** Defense in depth: restrict real sends to one test recipient when configured. */
+    @Value("${WHATSAPP_OUTBOX_TARGET_PHONE:}")
+    private String targetPhone = "";
+
     public WhatsAppCloudApiClient(RestClient.Builder builder,
             @Value("${WHATSAPP_ACCESS_TOKEN:}") String token,
             @Value("${WHATSAPP_PHONE_NUMBER_ID:}") String phoneNumberId,
@@ -41,6 +45,9 @@ public class WhatsAppCloudApiClient {
         }
         if (recipient == null || !recipient.matches("[1-9][0-9]{7,14}")) {
             throw new IllegalArgumentException("Invalid international recipient");
+        }
+        if (targetPhone != null && !targetPhone.isBlank() && !targetPhone.equals(recipient)) {
+            throw new IllegalStateException("Recipient is not permitted in controlled dispatch mode");
         }
         if (body == null || body.isBlank() || body.length() > 4096) {
             throw new IllegalArgumentException("Invalid WhatsApp text");
