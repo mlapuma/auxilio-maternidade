@@ -58,4 +58,29 @@ class WhatsAppOutboxDispatcherTest {
         verify(store).markForReview(id);
         verify(store, never()).markSent(id);
     }
+    @Test
+    void persistenceFailureAfterMetaSubmissionRequiresReviewWithoutResending() {
+        when(store.claimOne()).thenReturn(Optional.of(
+            new WhatsAppOutboxDispatchStore.PendingReply(id, "5511999999999", "Olá")));
+        when(store.stillEligible(id)).thenReturn(true);
+        doThrow(new IllegalStateException("database unavailable")).when(store).markSent(id);
+
+        assertTrue(dispatcher.dispatchOne());
+
+        verify(client, times(1)).sendText("5511999999999", "Olá");
+        verify(store).markSent(id);
+        verify(store).markForReview(id);
+    }
+
+    @Test
+    void eligibilityCheckFailureDoesNotCallMeta() {
+        when(store.claimOne()).thenReturn(Optional.of(
+            new WhatsAppOutboxDispatchStore.PendingReply(id, "5511999999999", "Olá")));
+        when(store.stillEligible(id)).thenThrow(new IllegalStateException("database unavailable"));
+
+        assertTrue(dispatcher.dispatchOne());
+
+        verifyNoInteractions(client);
+        verify(store).markForReview(id);
+    }
 }
