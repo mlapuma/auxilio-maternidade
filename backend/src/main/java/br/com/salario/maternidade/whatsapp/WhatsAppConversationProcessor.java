@@ -39,7 +39,8 @@ public class WhatsAppConversationProcessor {
         }
         String incomingText = message.text() == null ? "" : message.text().strip();
         var code = LANDING_CODE.matcher(incomingText);
-        if (current.step() != WhatsAppConversationFlow.Step.STOPPED && LANDING_INTENT.matcher(incomingText).matches()) {
+        // Sending a protocol is an explicit request to resume, including after Encerrar.
+        if (LANDING_INTENT.matcher(incomingText).matches()) {
             if (code.matches() && store.resumeLandingQuestionnaire(message.sender(), code.group(1).toUpperCase(Locale.ROOT))) {
                 store.cancelPendingReplies(message.sender());
                 return new WhatsAppConversationFlow.Transition(WhatsAppConversationFlow.Step.HANDOFF,

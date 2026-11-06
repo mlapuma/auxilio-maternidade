@@ -261,7 +261,6 @@ public class WhatsAppConversationStore {
                     ELSE EXCLUDED.respostas_triagem END,
                 lead_id = EXCLUDED.lead_id, correcao_pendente = NULL,
                 atualizado_em = CURRENT_TIMESTAMP
-            WHERE whatsapp_conversations.etapa <> 'STOPPED'
             """, UUID.randomUUID(), phone, protocol, phone, national) > 0;
     }
 

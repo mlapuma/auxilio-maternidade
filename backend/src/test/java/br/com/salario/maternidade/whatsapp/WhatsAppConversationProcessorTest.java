@@ -37,7 +37,7 @@ class WhatsAppConversationProcessorTest {
     @Test
     void verifiedProtocolAlwaysStartsAtMainMenuDespitePreviousActiveStep() {
         for (var step : WhatsAppConversationFlow.Step.values()) {
-            if (step == WhatsAppConversationFlow.Step.STOPPED) continue;
+
             var isolated = mock(WhatsAppConversationStore.class);
             when(isolated.findByPhone(PHONE)).thenReturn(Optional.of(new WhatsAppConversationStore.Conversation(PHONE, step, true)));
             when(isolated.resumeLandingQuestionnaire(PHONE, "SM-0123456789ABCDEF")).thenReturn(true);
@@ -154,13 +154,15 @@ class WhatsAppConversationProcessorTest {
     }
 
     @Test
-    void landingCodeDoesNotOverridePreviousOptOut() {
+    void verifiedLandingCodeExplicitlyRestartsStoppedConversation() {
         when(store.findByPhone(PHONE)).thenReturn(Optional.of(
             new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.STOPPED, false)));
+        when(store.resumeLandingQuestionnaire(PHONE, "SM-0123456789ABCDEF")).thenReturn(true);
         var transition = processor.process(new WhatsAppInboundMessage("wamid.stopped", PHONE,
             "Codigo SM-0123456789ABCDEF"));
-        assertEquals(WhatsAppConversationFlow.Step.STOPPED, transition.nextStep());
-        verify(store, never()).resumeLandingQuestionnaire(anyString(), anyString());
+        assertEquals(WhatsAppConversationFlow.Step.HANDOFF, transition.nextStep());
+        assertTrue(transition.reply().contains("Como posso ajudar agora?"));
+        verify(store).cancelPendingReplies(PHONE);
     }
 
     @Test
