@@ -18,6 +18,9 @@ import java.util.List;
 
 @Configuration
 public class SecurityConfig {
+    private static final String DEFAULT_ORIGINS = "http://localhost:4200,http://127.0.0.1:4200,https://auxiliomaternidade.financasemdiabrasil.com.br,https://auxilio-maternidade-frontend.onrender.com";
+    @Value("${CORS_ALLOWED_ORIGINS:" + DEFAULT_ORIGINS + "}")
+    private String allowedOrigins = DEFAULT_ORIGINS;
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
@@ -38,11 +41,8 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-            "http://localhost:4200",
-            "http://127.0.0.1:4200",
-            "https://auxiliomaternidade.financasemdiabrasil.com.br",
-            "https://auxilio-maternidade-frontend.onrender.com"));
+        config.setAllowedOrigins(java.util.Arrays.stream(allowedOrigins.split(","))
+            .map(String::trim).filter(origin -> !origin.isEmpty()).toList());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         config.setMaxAge(3600L);
