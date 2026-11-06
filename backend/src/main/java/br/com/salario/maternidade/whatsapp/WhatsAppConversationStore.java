@@ -9,6 +9,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class WhatsAppConversationStore {
     public record Conversation(String phone, WhatsAppConversationFlow.Step step, boolean consent) {}
+    public record SavedQuestionnaire(UUID triageId, java.util.Map<String, String> answers) {}
+    public record CorrectionDraft(UUID triageId, java.util.Map<String, String> original,
+        java.util.Map<String, String> candidate, String questionId, String nonce) {}
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
 
     private final JdbcTemplate jdbc;
 
@@ -26,6 +30,94 @@ public class WhatsAppConversationStore {
                     rs.getBoolean("consentimento")))
                 : Optional.empty(),
             phone);
+    }
+
+    public Optional<SavedQuestionnaire> findSavedQuestionnaire(String phone) {
+        validatePhone(phone);
+        String national = phone.startsWith("55") && (phone.length() == 12 || phone.length() == 13) ? phone.substring(2) : phone;
+        return jdbc.query("""
+            SELECT t.id, t.respostas_detalhadas FROM whatsapp_conversations c
+              JOIN leads l ON l.id = c.lead_id
+              JOIN LATERAL (SELECT id, respostas_detalhadas FROM triagens WHERE lead_id = l.id
+                  ORDER BY criado_em DESC, id DESC LIMIT 1) t ON true
+             WHERE c.telefone = ? AND c.consentimento = true AND c.etapa <> 'STOPPED'
+               AND l.consentimento_contato = true
+               AND regexp_replace(l.telefone, '[^0-9]', '', 'g') IN (?, ?)
+            """, rs -> {
+                if (!rs.next() || rs.getString("respostas_detalhadas") == null) return Optional.empty();
+                try {
+                    java.util.Map<String, String> answers = JSON.readValue(rs.getString("respostas_detalhadas"),
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
+                    return Optional.of(new SavedQuestionnaire((UUID) rs.getObject("id"), answers));
+                } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                    return Optional.empty();
+                }
+            }, phone, phone, national);
+    }
+
+    public Optional<CorrectionDraft> findCorrectionDraft(String phone) {
+        validatePhone(phone);
+        return jdbc.query("""
+            SELECT correcao_pendente::text AS draft FROM whatsapp_conversations
+             WHERE telefone = ? AND consentimento = true AND etapa <> 'STOPPED'
+            """, rs -> {
+                if (!rs.next() || rs.getString("draft") == null) return Optional.empty();
+                try { return Optional.of(JSON.readValue(rs.getString("draft"), CorrectionDraft.class)); }
+                catch (com.fasterxml.jackson.core.JsonProcessingException e) { return Optional.empty(); }
+            }, phone);
+    }
+
+    public void saveCorrectionDraft(String phone, CorrectionDraft draft) {
+        validatePhone(phone);
+        jdbc.update("""
+            UPDATE whatsapp_conversations SET correcao_pendente = ?::jsonb, atualizado_em = CURRENT_TIMESTAMP
+             WHERE telefone = ? AND consentimento = true AND etapa <> 'STOPPED' AND lead_id IS NOT NULL
+            """, json(draft), phone);
+    }
+
+    public void clearCorrectionDraft(String phone) {
+        validatePhone(phone);
+        jdbc.update("UPDATE whatsapp_conversations SET correcao_pendente = NULL WHERE telefone = ?", phone);
+    }
+
+    /** Insert a new questionnaire version only after confirmation and an optimistic version check. */
+    public boolean applyQuestionnaireCorrection(String phone, CorrectionDraft draft) {
+        validatePhone(phone);
+        String national = phone.startsWith("55") && (phone.length() == 12 || phone.length() == 13) ? phone.substring(2) : phone;
+        boolean birth = WhatsAppQuestionnaire.birth(draft.candidate());
+        boolean contribution = WhatsAppQuestionnaire.contribution(draft.candidate());
+        boolean wants = WhatsAppQuestionnaire.wantsContact(draft.candidate());
+        String answers = json(draft.candidate());
+        return jdbc.update("""
+            WITH current_questionnaire AS (
+                SELECT c.id AS conversation_id, l.id AS lead_id FROM whatsapp_conversations c
+                  JOIN leads l ON l.id = c.lead_id
+                 WHERE c.telefone = ? AND c.consentimento = true AND c.etapa = 'CORRECT_CONFIRM'
+                   AND l.consentimento_contato = true
+                   AND regexp_replace(l.telefone, '[^0-9]', '', 'g') IN (?, ?)
+                   AND c.correcao_pendente ->> 'nonce' = ?
+                   AND (SELECT id FROM triagens WHERE lead_id = l.id ORDER BY criado_em DESC, id DESC LIMIT 1) = ?
+                 FOR UPDATE OF c, l
+            ), inserted AS (
+                INSERT INTO triagens (id, lead_id, houve_nascimento_ou_adocao, possui_vinculo_ou_contribuicao,
+                    deseja_atendimento, classificacao, respostas_detalhadas, criado_em)
+                SELECT ?, lead_id, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP FROM current_questionnaire
+                RETURNING id, lead_id
+            )
+            UPDATE whatsapp_conversations c SET respostas_triagem = COALESCE(c.respostas_triagem, '{}'::jsonb)
+                || jsonb_build_object('triagem_id', i.id, 'respostas_detalhadas', ?::text,
+                    'houve_nascimento_ou_adocao', ?::boolean, 'possui_vinculo_ou_contribuicao', ?::boolean,
+                    'deseja_atendimento', ?::boolean),
+                correcao_pendente = NULL, atualizado_em = CURRENT_TIMESTAMP
+              FROM inserted i WHERE c.telefone = ? AND c.lead_id = i.lead_id
+            """, phone, phone, national, draft.nonce(), draft.triageId(), UUID.randomUUID(), birth, contribution, wants,
+            birth && contribution ? "ENCAMINHAR_ANALISE" : "PRECISA_AVALIACAO", answers,
+            answers, birth, contribution, wants, phone) > 0;
+    }
+
+    private static String json(Object value) {
+        try { return JSON.writeValueAsString(value); }
+        catch (com.fasterxml.jackson.core.JsonProcessingException e) { throw new IllegalArgumentException("Invalid correction data"); }
     }
 
     public void save(Conversation conversation) {
@@ -70,7 +162,7 @@ public class WhatsAppConversationStore {
         validatePhone(phone);
         jdbc.update("""
             UPDATE whatsapp_conversations
-               SET lead_id = NULL, atualizado_em = CURRENT_TIMESTAMP
+               SET lead_id = NULL, correcao_pendente = NULL, atualizado_em = CURRENT_TIMESTAMP
              WHERE telefone = ?
             """, phone);
     }
@@ -167,7 +259,7 @@ public class WhatsAppConversationStore {
                 respostas_triagem = CASE WHEN whatsapp_conversations.lead_id = EXCLUDED.lead_id
                     THEN COALESCE(whatsapp_conversations.respostas_triagem, '{}'::jsonb) || EXCLUDED.respostas_triagem
                     ELSE EXCLUDED.respostas_triagem END,
-                lead_id = EXCLUDED.lead_id,
+                lead_id = EXCLUDED.lead_id, correcao_pendente = NULL,
                 atualizado_em = CURRENT_TIMESTAMP
             WHERE whatsapp_conversations.etapa <> 'STOPPED'
             """, UUID.randomUUID(), phone, protocol, phone, national) > 0;

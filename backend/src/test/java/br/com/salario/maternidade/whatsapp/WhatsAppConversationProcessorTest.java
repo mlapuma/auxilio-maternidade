@@ -30,11 +30,12 @@ class WhatsAppConversationProcessorTest {
     }
 
     @Test
-    void savesCorrectionsSeparatelyWithoutOverwritingQuestionnaire() {
+    void correctionWithoutLinkedQuestionnaireRequestsTeamHelp() {
         when(store.findByPhone(PHONE)).thenReturn(Optional.of(
             new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.CORRECT_INFO, true)));
-        processor.process(new WhatsAppInboundMessage("wamid.correction", PHONE, "Corrigir a resposta sobre trabalho"));
-        verify(store).appendFollowUp(PHONE, "correcoes", "Corrigir a resposta sobre trabalho");
+        var result = processor.process(new WhatsAppInboundMessage("wamid.correction", PHONE, "Corrigir a resposta sobre trabalho"));
+        assertTrue(result.reply().contains("Não localizei"));
+        verify(store, never()).appendFollowUp(anyString(), anyString(), anyString());
         verify(store, never()).saveScreeningAnswer(anyString(), anyString(), anyString());
     }
 

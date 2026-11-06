@@ -21,6 +21,15 @@ class WhatsAppInboundMessageParserTest {
         assertTrue(parser.parse(interactive("button_reply", "unknown", "SIM")).isEmpty());
     }
 
+    @Test
+    void parsesSessionScopedCorrectionChoiceWithoutTrustingTitle() throws Exception {
+        String action = "qc:0123456789abcdef:a:2";
+        var messages = parser.parse(interactive("list_reply", action, "Qualquer título"));
+        assertEquals(action, messages.get(0).text());
+        assertEquals(WhatsAppConversationFlow.Step.CORRECT_VALUE, messages.get(0).expectedStep());
+        assertTrue(parser.parse(interactive("list_reply", "qc:invalid:a:2", "SIM")).isEmpty());
+    }
+
     private String interactive(String type, String id, String title) {
         return """
             {"object":"whatsapp_business_account","entry":[{"changes":[{"value":{

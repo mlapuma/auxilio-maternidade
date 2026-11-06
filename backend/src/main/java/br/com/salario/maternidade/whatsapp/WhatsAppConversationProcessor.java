@@ -13,9 +13,11 @@ public class WhatsAppConversationProcessor {
     private static final Pattern LANDING_CODE = Pattern.compile("(?iu)^c[oó]digo\\s+(SM-[A-F0-9]{16})$");
     private final WhatsAppConversationStore store;
     private final WhatsAppConversationFlow flow = new WhatsAppConversationFlow();
+    private final WhatsAppGuidedCorrection correction;
 
     public WhatsAppConversationProcessor(WhatsAppConversationStore store) {
         this.store = store;
+        this.correction = new WhatsAppGuidedCorrection(store);
     }
 
     public WhatsAppConversationFlow.Transition process(WhatsAppInboundMessage message) {
@@ -24,6 +26,9 @@ public class WhatsAppConversationProcessor {
                 message.sender(), WhatsAppConversationFlow.Step.START, false));
         if (message.expectedStep() != null && message.expectedStep() != current.step()) {
             // An old button must not answer a different question or grant new consent.
+            if (current.consent() && WhatsAppGuidedCorrection.isCorrection(current.step())) {
+                return correction.process(message.sender(), current.step(), "");
+            }
             return flow.next(current.step(), "");
         }
         var code = LANDING_CODE.matcher(message.text() == null ? "" : message.text().strip());
@@ -36,7 +41,15 @@ public class WhatsAppConversationProcessor {
                 + "A equipe fará a análise individual; isto não confirma direito ao benefício.\n\n"
                 + WhatsAppConversationFlow.MENU, true);
         }
-        var transition = flow.next(current.step(), message.text());
+        String normalizedInput = WhatsAppConversationFlow.normalized(message.text());
+        boolean leaving = WhatsAppConversationFlow.menuCommand(message.text())
+            || java.util.Set.of("sair", "parar", "cancelar", "stop", "unsubscribe").contains(normalizedInput);
+        boolean enteringCorrection = current.step() == WhatsAppConversationFlow.Step.HANDOFF
+            && java.util.Set.of("2", "corrigir", "corrigir resposta").contains(normalizedInput);
+        var transition = current.consent() && !leaving && (enteringCorrection || WhatsAppGuidedCorrection.isCorrection(current.step()))
+            ? (enteringCorrection ? correction.start(message.sender()) : correction.process(message.sender(), current.step(), message.text()))
+            : flow.next(current.step(), message.text());
+        if (leaving && WhatsAppGuidedCorrection.isCorrection(current.step())) store.clearCorrectionDraft(message.sender());
         boolean consent = current.consent();
         if (current.step() == WhatsAppConversationFlow.Step.CONSENT
                 && transition.nextStep() == WhatsAppConversationFlow.Step.BIRTH) {
@@ -49,12 +62,9 @@ public class WhatsAppConversationProcessor {
             message.sender(), transition.nextStep(), consent));
         if (consent && transition.nextStep() != WhatsAppConversationFlow.Step.STOPPED
                 && !WhatsAppConversationFlow.menuCommand(message.text())) {
-            if ((current.step() == WhatsAppConversationFlow.Step.ADD_INFO
-                    || current.step() == WhatsAppConversationFlow.Step.CORRECT_INFO)
+            if (current.step() == WhatsAppConversationFlow.Step.ADD_INFO
                     && transition.nextStep() == WhatsAppConversationFlow.Step.HANDOFF) {
-                store.appendFollowUp(message.sender(),
-                    current.step() == WhatsAppConversationFlow.Step.ADD_INFO ? "complementos" : "correcoes",
-                    message.text().strip());
+                store.appendFollowUp(message.sender(), "complementos", message.text().strip());
             } else if ((current.step() == WhatsAppConversationFlow.Step.HANDOFF
                     || current.step() == WhatsAppConversationFlow.Step.FAQ)
                     && WhatsAppConversationFlow.teamCommand(message.text())) {

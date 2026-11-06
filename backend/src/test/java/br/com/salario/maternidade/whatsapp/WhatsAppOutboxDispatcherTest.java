@@ -8,6 +8,17 @@ import static org.mockito.Mockito.*;
 
 class WhatsAppOutboxDispatcherTest {
     @Test
+    void usesPersistedDynamicChoicesInsteadOfGenericStepMenu() {
+        String payload = "{\"type\":\"list\"}";
+        when(store.claimOne()).thenReturn(Optional.of(new WhatsAppOutboxDispatchStore.PendingReply(
+            id, "5511999999999", "Escolha a resposta", "wamid.inbound", "CORRECT_INFO", payload)));
+        when(store.stillEligible(id)).thenReturn(true);
+        assertTrue(dispatcher.dispatchOne());
+        verify(client).sendInteractivePayload("5511999999999", payload);
+        verify(client, never()).sendInteractiveReply(anyString(), anyString(), anyString());
+        verify(store).markSent(id);
+    }
+    @Test
     void dispatchesInteractiveReplyUsingPersistedQuestion() {
         when(store.claimOne()).thenReturn(Optional.of(new WhatsAppOutboxDispatchStore.PendingReply(
             id, "5511999999999", "O bebê já nasceu?", "wamid.inbound", "BIRTH")));

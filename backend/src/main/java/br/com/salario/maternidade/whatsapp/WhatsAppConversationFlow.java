@@ -8,10 +8,14 @@ import java.util.Locale;
  */
 public class WhatsAppConversationFlow {
     public enum Step {
-        START, CONSENT, BIRTH, WORK, HANDOFF, ADD_INFO, CORRECT_INFO, FAQ, STOPPED
+        START, CONSENT, BIRTH, WORK, HANDOFF, ADD_INFO, CORRECT_INFO, CORRECT_VALUE, CORRECT_CONFIRM, FAQ, STOPPED
     }
 
-    public record Transition(Step nextStep, String reply, boolean requiresHuman) {}
+    public record Transition(Step nextStep, String reply, boolean requiresHuman, java.util.Map<String, Object> interactive) {
+        public Transition(Step nextStep, String reply, boolean requiresHuman) {
+            this(nextStep, reply, requiresHuman, null);
+        }
+    }
 
     public static final String MENU = """
         Como posso ajudar agora?
@@ -42,7 +46,7 @@ public class WhatsAppConversationFlow {
             return new Transition(Step.STOPPED,
                 "Atendimento automático encerrado. Você pode solicitar novo contato quando desejar.", false);
         }
-        if ((step == Step.HANDOFF || step == Step.ADD_INFO || step == Step.CORRECT_INFO || step == Step.FAQ)
+        if ((step == Step.HANDOFF || step == Step.ADD_INFO || step == Step.CORRECT_INFO || step == Step.CORRECT_VALUE || step == Step.CORRECT_CONFIRM || step == Step.FAQ)
                 && menuCommand(answer)) {
             return new Transition(Step.HANDOFF, MENU, true);
         }
@@ -86,6 +90,7 @@ public class WhatsAppConversationFlow {
                 : new Transition(Step.HANDOFF,
                     (step == Step.ADD_INFO ? "Informações complementares registradas." : "Pedido de correção registrado para revisão da equipe. Sua resposta original foi preservada.")
                     + "\n\n" + MENU, true);
+            case CORRECT_VALUE, CORRECT_CONFIRM -> new Transition(step, "Escolha uma opção da correção ou digite MENU para voltar.", true);
             case FAQ -> switch (normalized(answer)) {
                 case "1", "como funciona" -> new Transition(Step.FAQ,
                     "O atendimento virtual registra suas informações e dúvidas. A equipe responsável faz a análise individual e orienta os próximos passos.\nDigite 2 para documentos, 3 para prazo, 4 para falar com a equipe ou MENU para voltar.", true);

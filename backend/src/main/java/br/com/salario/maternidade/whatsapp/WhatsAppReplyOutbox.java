@@ -18,6 +18,11 @@ public class WhatsAppReplyOutbox {
 
     public void enqueue(String inboundMessageId, String phone, String reply,
             boolean consentRequest) {
+        enqueue(inboundMessageId, phone, reply, consentRequest, null);
+    }
+
+    public void enqueue(String inboundMessageId, String phone, String reply,
+            boolean consentRequest, java.util.Map<String, Object> interactive) {
         if (inboundMessageId == null || inboundMessageId.isBlank() || inboundMessageId.length() > 255) {
             throw new IllegalArgumentException("Invalid inbound message id");
         }
@@ -29,11 +34,17 @@ public class WhatsAppReplyOutbox {
         }
         jdbc.update("""
             INSERT INTO whatsapp_outbox
-                (id, mensagem_entrada_id, telefone, corpo, status, tipo_resposta, etapa_resposta)
+                (id, mensagem_entrada_id, telefone, corpo, status, tipo_resposta, etapa_resposta, interactive_payload)
             VALUES (?, ?, ?, ?, 'PENDENTE', ?,
-                (SELECT etapa FROM whatsapp_conversations WHERE telefone = ?))
+                (SELECT etapa FROM whatsapp_conversations WHERE telefone = ?), ?)
             ON CONFLICT (mensagem_entrada_id) DO NOTHING
             """, UUID.randomUUID(), inboundMessageId, phone, reply,
-            consentRequest ? "CONSENT_REQUEST" : "STANDARD", phone);
+            consentRequest ? "CONSENT_REQUEST" : "STANDARD", phone, encode(interactive));
+    }
+
+    private static String encode(java.util.Map<String, Object> interactive) {
+        if (interactive == null) return null;
+        try { return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(interactive); }
+        catch (com.fasterxml.jackson.core.JsonProcessingException e) { throw new IllegalArgumentException("Invalid interactive reply"); }
     }
 }

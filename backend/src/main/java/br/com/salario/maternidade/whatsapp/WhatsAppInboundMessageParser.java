@@ -36,7 +36,9 @@ public class WhatsAppInboundMessageParser {
                         JsonNode interactive = message.path("interactive");
                         String type = interactive.path("type").asText();
                         if (!"button_reply".equals(type) && !"list_reply".equals(type)) continue;
-                        var choice = WhatsAppInteractiveOptions.parseChoice(interactive.path(type).path("id").asText());
+                        String actionId = interactive.path(type).path("id").asText();
+                        var choice = WhatsAppInteractiveOptions.parseChoice(actionId);
+                        if (choice == null) choice = WhatsAppGuidedCorrection.parseAction(actionId);
                         if (choice == null) continue;
                         text = choice.answer();
                         expectedStep = choice.expectedStep();

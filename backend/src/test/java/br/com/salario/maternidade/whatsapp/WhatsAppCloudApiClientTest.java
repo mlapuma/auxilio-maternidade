@@ -10,6 +10,21 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class WhatsAppCloudApiClientTest {
     @Test
+    void sendsSavedQuestionnaireOptionsWithSessionIdentifiers() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://graph.facebook.com/v23.0/123456/messages"))
+            .andExpect(jsonPath("$.interactive.type").value("list"))
+            .andExpect(jsonPath("$.interactive.action.sections[0].rows[0].id").value("qc:0123456789abcdef:q:trabalho"))
+            .andExpect(jsonPath("$.interactive.action.sections[0].rows[0].description").value("Não estou trabalhando"))
+            .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        new WhatsAppCloudApiClient(builder, "test-token", "123456", "v23.0", true).sendInteractivePayload("5511999999999", """
+            {"type":"list","body":{"text":"Qual resposta deseja corrigir?"},"action":{"button":"Escolher resposta",
+            "sections":[{"title":"Questionário","rows":[{"id":"qc:0123456789abcdef:q:trabalho","title":"Trabalho","description":"Não estou trabalhando"}]}]}}
+            """);
+        server.verify();
+    }
+    @Test
     void sendsBirthQuestionAsTwoReplyButtons() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

@@ -52,7 +52,9 @@ public class WhatsAppOutboxDispatcher {
         }
 
         try {
-            if (reply.replyStep() == null) {
+            if (reply.interactivePayload() != null) {
+                client.sendInteractivePayload(reply.phone(), reply.interactivePayload());
+            } else if (reply.replyStep() == null) {
                 client.sendText(reply.phone(), reply.body());
             } else {
                 client.sendInteractiveReply(reply.phone(), reply.body(), reply.replyStep());

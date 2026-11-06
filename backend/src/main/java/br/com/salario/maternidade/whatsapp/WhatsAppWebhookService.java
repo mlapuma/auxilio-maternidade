@@ -108,7 +108,10 @@ public class WhatsAppWebhookService {
                     // dispatcher correctly forbids sending in STOPPED state.
                     if (replyOutbox != null
                             && transition.nextStep() != WhatsAppConversationFlow.Step.STOPPED) {
-                        if (transition.nextStep() == WhatsAppConversationFlow.Step.CONSENT) {
+                        if (transition.interactive() != null) {
+                            replyOutbox.enqueue(message.messageId(), message.sender(), transition.reply(),
+                                transition.nextStep() == WhatsAppConversationFlow.Step.CONSENT, transition.interactive());
+                        } else if (transition.nextStep() == WhatsAppConversationFlow.Step.CONSENT) {
                             replyOutbox.enqueue(message.messageId(), message.sender(), transition.reply(), true);
                         } else {
                             replyOutbox.enqueue(message.messageId(), message.sender(), transition.reply());

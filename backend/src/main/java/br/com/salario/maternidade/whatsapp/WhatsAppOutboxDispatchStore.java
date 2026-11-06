@@ -13,12 +13,15 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Repository
 public class WhatsAppOutboxDispatchStore {
-    public record PendingReply(UUID id, String phone, String body, String inboundMessageId, String replyStep) {
+    public record PendingReply(UUID id, String phone, String body, String inboundMessageId, String replyStep, String interactivePayload) {
         public PendingReply(UUID id, String phone, String body) {
-            this(id, phone, body, null, null);
+            this(id, phone, body, null, null, null);
         }
         public PendingReply(UUID id, String phone, String body, String inboundMessageId) {
-            this(id, phone, body, inboundMessageId, null);
+            this(id, phone, body, inboundMessageId, null, null);
+        }
+        public PendingReply(UUID id, String phone, String body, String inboundMessageId, String replyStep) {
+            this(id, phone, body, inboundMessageId, replyStep, null);
         }
     }
 
@@ -83,12 +86,12 @@ public class WhatsAppOutboxDispatchStore {
                 FOR UPDATE OF o, c SKIP LOCKED
                 LIMIT 1
             )
-            RETURNING id, telefone, corpo, mensagem_entrada_id, etapa_resposta
+            RETURNING id, telefone, corpo, mensagem_entrada_id, etapa_resposta, interactive_payload
             """, rs -> rs.next()
                 ? Optional.of(new PendingReply(
                     (UUID) rs.getObject("id"),
                     rs.getString("telefone"),
-                    rs.getString("corpo"), rs.getString("mensagem_entrada_id"), rs.getString("etapa_resposta")))
+                    rs.getString("corpo"), rs.getString("mensagem_entrada_id"), rs.getString("etapa_resposta"), rs.getString("interactive_payload")))
                 : Optional.empty(), targetPhone == null ? "" : targetPhone,
                 targetPhone == null ? "" : targetPhone);
     }
