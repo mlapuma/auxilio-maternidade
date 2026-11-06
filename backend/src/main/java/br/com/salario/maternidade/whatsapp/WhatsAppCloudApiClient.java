@@ -145,6 +145,24 @@ public class WhatsAppCloudApiClient {
             .toBodilessEntity();
     }
 
+    public void sendInteractiveReply(String recipient, String body, String replyStep) {
+        validateRecipient(recipient);
+        if (body == null || body.isBlank() || body.length() > 4096) {
+            throw new IllegalArgumentException("Invalid WhatsApp text");
+        }
+        var interactive = WhatsAppInteractiveOptions.payload(WhatsAppConversationFlow.Step.valueOf(replyStep), body);
+        if (interactive == null) {
+            sendText(recipient, body);
+            return;
+        }
+        client.post().uri("/{phoneNumberId}/messages", phoneNumberId)
+            .headers(headers -> headers.setBearerAuth(token.trim()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(Map.of("messaging_product", "whatsapp", "recipient_type", "individual", "to", recipient,
+                "type", "interactive", "interactive", interactive))
+            .retrieve().toBodilessEntity();
+    }
+
     /** Also marks the customer's incoming message as read, as required by Meta. */
     public void sendTypingIndicator(String recipient, String inboundMessageId) {
         validateRecipient(recipient);

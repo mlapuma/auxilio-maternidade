@@ -22,6 +22,10 @@ public class WhatsAppConversationProcessor {
         var current = store.findByPhone(message.sender())
             .orElse(new WhatsAppConversationStore.Conversation(
                 message.sender(), WhatsAppConversationFlow.Step.START, false));
+        if (message.expectedStep() != null && message.expectedStep() != current.step()) {
+            // An old button must not answer a different question or grant new consent.
+            return flow.next(current.step(), "");
+        }
         var code = LANDING_CODE.matcher(message.text() == null ? "" : message.text().strip());
         if (current.step() != WhatsAppConversationFlow.Step.STOPPED && code.matches()
                 && store.resumeLandingQuestionnaire(message.sender(), code.group(1).toUpperCase(Locale.ROOT))) {

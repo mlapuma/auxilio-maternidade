@@ -29,10 +29,11 @@ public class WhatsAppReplyOutbox {
         }
         jdbc.update("""
             INSERT INTO whatsapp_outbox
-                (id, mensagem_entrada_id, telefone, corpo, status, tipo_resposta)
-            VALUES (?, ?, ?, ?, 'PENDENTE', ?)
+                (id, mensagem_entrada_id, telefone, corpo, status, tipo_resposta, etapa_resposta)
+            VALUES (?, ?, ?, ?, 'PENDENTE', ?,
+                (SELECT etapa FROM whatsapp_conversations WHERE telefone = ?))
             ON CONFLICT (mensagem_entrada_id) DO NOTHING
             """, UUID.randomUUID(), inboundMessageId, phone, reply,
-            consentRequest ? "CONSENT_REQUEST" : "STANDARD");
+            consentRequest ? "CONSENT_REQUEST" : "STANDARD", phone);
     }
 }

@@ -52,7 +52,11 @@ public class WhatsAppOutboxDispatcher {
         }
 
         try {
-            client.sendText(reply.phone(), reply.body());
+            if (reply.replyStep() == null) {
+                client.sendText(reply.phone(), reply.body());
+            } else {
+                client.sendInteractiveReply(reply.phone(), reply.body(), reply.replyStep());
+            }
         } catch (RuntimeException ex) {
             // An HTTP/network failure can be ambiguous: Meta may have accepted
             // the request. Do not automatically retry this outbox record.

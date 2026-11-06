@@ -10,6 +10,35 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class WhatsAppCloudApiClientTest {
     @Test
+    void sendsBirthQuestionAsTwoReplyButtons() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://graph.facebook.com/v23.0/123456/messages"))
+            .andExpect(jsonPath("$.type").value("interactive"))
+            .andExpect(jsonPath("$.interactive.type").value("button"))
+            .andExpect(jsonPath("$.interactive.action.buttons.length()").value(2))
+            .andExpect(jsonPath("$.interactive.action.buttons[0].reply.id").value("birth_born"))
+            .andExpect(jsonPath("$.interactive.action.buttons[0].reply.title").value("Já nasceu"))
+            .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        new WhatsAppCloudApiClient(builder, "test-token", "123456", "v23.0", true)
+            .sendInteractiveReply("5511999999999", "O bebê já nasceu?", "BIRTH");
+        server.verify();
+    }
+
+    @Test
+    void sendsFollowUpMenuAsList() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://graph.facebook.com/v23.0/123456/messages"))
+            .andExpect(jsonPath("$.interactive.type").value("list"))
+            .andExpect(jsonPath("$.interactive.action.sections[0].rows.length()").value(5))
+            .andExpect(jsonPath("$.interactive.action.sections[0].rows[4].id").value("menu_status"))
+            .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        new WhatsAppCloudApiClient(builder, "test-token", "123456", "v23.0", true)
+            .sendInteractiveReply("5511999999999", "Como posso ajudar?", "HANDOFF");
+        server.verify();
+    }
+    @Test
     void sendsOfficialTypingIndicatorForInboundMessage() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

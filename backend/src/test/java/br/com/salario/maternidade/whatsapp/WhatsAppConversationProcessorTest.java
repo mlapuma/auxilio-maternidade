@@ -11,6 +11,25 @@ class WhatsAppConversationProcessorTest {
     private static final String PHONE = "5511999999999";
 
     @Test
+    void oldButtonDoesNotAnswerADifferentQuestion() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.WORK, true)));
+        var result = processor.process(new WhatsAppInboundMessage("wamid.old", PHONE, "sim", WhatsAppConversationFlow.Step.CONSENT));
+        assertEquals(WhatsAppConversationFlow.Step.WORK, result.nextStep());
+        verify(store, never()).save(any());
+        verify(store, never()).saveScreeningAnswer(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void correctButtonAdvancesTheQuestionLikeATypedAnswer() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.BIRTH, true)));
+        var result = processor.process(new WhatsAppInboundMessage("wamid.button", PHONE, "nasceu", WhatsAppConversationFlow.Step.BIRTH));
+        assertEquals(WhatsAppConversationFlow.Step.WORK, result.nextStep());
+        verify(store).saveScreeningAnswer(PHONE, "situacao_bebe", "NASCEU");
+    }
+
+    @Test
     void savesCorrectionsSeparatelyWithoutOverwritingQuestionnaire() {
         when(store.findByPhone(PHONE)).thenReturn(Optional.of(
             new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.CORRECT_INFO, true)));

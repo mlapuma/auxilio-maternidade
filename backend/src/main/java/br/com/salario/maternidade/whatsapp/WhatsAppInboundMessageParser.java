@@ -26,13 +26,24 @@ public class WhatsAppInboundMessageParser {
         for (JsonNode entry : root.path("entry")) {
             for (JsonNode change : entry.path("changes")) {
                 for (JsonNode message : change.path("value").path("messages")) {
-                    if (!"text".equals(message.path("type").asText())) continue;
                     String id = message.path("id").asText();
                     String sender = message.path("from").asText();
-                    String text = message.path("text").path("body").asText();
+                    String text;
+                    WhatsAppConversationFlow.Step expectedStep = null;
+                    if ("text".equals(message.path("type").asText())) {
+                        text = message.path("text").path("body").asText();
+                    } else if ("interactive".equals(message.path("type").asText())) {
+                        JsonNode interactive = message.path("interactive");
+                        String type = interactive.path("type").asText();
+                        if (!"button_reply".equals(type) && !"list_reply".equals(type)) continue;
+                        var choice = WhatsAppInteractiveOptions.parseChoice(interactive.path(type).path("id").asText());
+                        if (choice == null) continue;
+                        text = choice.answer();
+                        expectedStep = choice.expectedStep();
+                    } else continue;
                     if (id.isBlank() || sender.isBlank() || text.isBlank()) continue;
                     try {
-                        result.add(new WhatsAppInboundMessage(id, sender, text));
+                        result.add(new WhatsAppInboundMessage(id, sender, text, expectedStep));
                     } catch (IllegalArgumentException ignored) {
                         // Ignore malformed messages without exposing personal content.
                     }
