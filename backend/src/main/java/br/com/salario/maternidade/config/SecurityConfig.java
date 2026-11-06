@@ -39,6 +39,8 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
+            "http://localhost:4200",
+            "http://127.0.0.1:4200",
             "https://auxiliomaternidade.financasemdiabrasil.com.br",
             "https://auxilio-maternidade-frontend.onrender.com"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
