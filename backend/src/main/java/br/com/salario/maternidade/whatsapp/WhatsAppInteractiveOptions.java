@@ -23,6 +23,7 @@ public final class WhatsAppInteractiveOptions {
                 new Choice("faq_menu", "Voltar ao menu", "menu"));
             case ADD_INFO -> List.of(new Choice("add_menu", "Voltar ao menu", "menu"));
             case CORRECT_INFO -> List.of(new Choice("correct_menu", "Voltar ao menu", "menu"));
+            case WAIT_TEAM -> List.of(new Choice("wait_team_menu", "Voltar ao menu", "menu"));
             default -> List.of();
         };
     }

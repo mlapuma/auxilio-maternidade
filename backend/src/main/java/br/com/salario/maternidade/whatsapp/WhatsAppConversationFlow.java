@@ -8,7 +8,7 @@ import java.util.Locale;
  */
 public class WhatsAppConversationFlow {
     public enum Step {
-        START, CONSENT, BIRTH, WORK, HANDOFF, ADD_INFO, CORRECT_INFO, CORRECT_VALUE, CORRECT_CONFIRM, FAQ, STOPPED
+        START, CONSENT, BIRTH, WORK, HANDOFF, WAIT_TEAM, ADD_INFO, CORRECT_INFO, CORRECT_VALUE, CORRECT_CONFIRM, FAQ, STOPPED
     }
 
     public record Transition(Step nextStep, String reply, boolean requiresHuman, java.util.Map<String, Object> interactive) {
@@ -46,7 +46,7 @@ public class WhatsAppConversationFlow {
             return new Transition(Step.STOPPED,
                 "Atendimento automático encerrado. Você pode solicitar novo contato quando desejar.", false);
         }
-        if ((step == Step.HANDOFF || step == Step.ADD_INFO || step == Step.CORRECT_INFO || step == Step.CORRECT_VALUE || step == Step.CORRECT_CONFIRM || step == Step.FAQ)
+        if ((step == Step.HANDOFF || step == Step.WAIT_TEAM || step == Step.ADD_INFO || step == Step.CORRECT_INFO || step == Step.CORRECT_VALUE || step == Step.CORRECT_CONFIRM || step == Step.FAQ)
                 && menuCommand(answer)) {
             return new Transition(Step.HANDOFF, MENU, true);
         }
@@ -77,14 +77,18 @@ public class WhatsAppConversationFlow {
                     "Informe qual resposta deseja corrigir e o novo valor. A alteração será registrada para revisão da equipe. Não envie CPF, documentos ou informações de saúde. Digite MENU para voltar.", true);
                 case "3", "duvida", "duvidas" -> new Transition(Step.FAQ,
                     "Sobre o que deseja saber?\n1 — Como funciona o atendimento\n2 — Documentos\n3 — Prazo de retorno\n4 — Falar com a equipe\nOu escreva sua dúvida. Digite MENU para voltar.", true);
-                case "4", "equipe", "atendente", "falar com a equipe" -> new Transition(Step.HANDOFF,
-                    "Sua solicitação de contato foi registrada. A equipe poderá responder por aqui quando estiver disponível.\n\n" + MENU, true);
+                case "4", "equipe", "atendente", "falar com a equipe" -> new Transition(Step.WAIT_TEAM,
+                    "Sua solicitação de contato foi registrada. A equipe poderá responder por aqui quando estiver disponível. Você pode acrescentar uma mensagem enquanto aguarda. Para outras opções, toque em Voltar ao menu.", true);
                 case "5", "andamento", "status" -> new Transition(Step.HANDOFF,
                     "Consulte o andamento do atendimento com a equipe.\n\n" + MENU, true);
                 case "", "oi", "ola" -> new Transition(Step.HANDOFF, MENU, true);
                 default -> new Transition(Step.HANDOFF,
                     "Recebi sua mensagem e ela ficará no histórico para a equipe.\n\n" + MENU, true);
             };
+            case WAIT_TEAM -> new Transition(Step.WAIT_TEAM,
+                input.isBlank() || teamCommand(answer)
+                    ? "Seu pedido de contato já está registrado e aguarda a equipe. Para outras opções, toque em Voltar ao menu."
+                    : "Sua mensagem foi registrada no histórico do atendimento. A equipe poderá consultar e responder por aqui quando estiver disponível.", true);
             case ADD_INFO, CORRECT_INFO -> input.isBlank() || answer.length() > 4096
                 ? new Transition(step, "Envie uma mensagem de até 4.096 caracteres ou digite MENU para voltar.", true)
                 : new Transition(Step.HANDOFF,
@@ -98,8 +102,8 @@ public class WhatsAppConversationFlow {
                     "A equipe informará quais documentos são necessários e o canal adequado para envio. Não envie documentos ou dados sensíveis ao atendimento automático. Digite MENU para voltar ou 4 para falar com a equipe.", true);
                 case "3", "prazo" -> new Transition(Step.FAQ,
                     "Ainda não há um prazo de retorno confirmado. Para solicitar uma atualização, digite 4. Digite MENU para voltar.", true);
-                case "4", "equipe", "atendente", "falar com a equipe" -> new Transition(Step.HANDOFF,
-                    "Sua solicitação de contato foi registrada. A equipe poderá responder por aqui quando estiver disponível.\n\n" + MENU, true);
+                case "4", "equipe", "atendente", "falar com a equipe" -> new Transition(Step.WAIT_TEAM,
+                    "Sua solicitação de contato foi registrada. A equipe poderá responder por aqui quando estiver disponível. Você pode acrescentar uma mensagem enquanto aguarda. Para outras opções, toque em Voltar ao menu.", true);
                 case "" -> new Transition(Step.FAQ, "Escreva sua dúvida ou digite MENU para voltar.", true);
                 default -> input.length() > 4096
                     ? new Transition(Step.FAQ, "Envie uma dúvida de até 4.096 caracteres ou digite MENU para voltar.", true)

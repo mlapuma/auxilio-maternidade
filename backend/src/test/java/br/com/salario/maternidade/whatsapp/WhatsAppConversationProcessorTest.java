@@ -11,6 +11,19 @@ class WhatsAppConversationProcessorTest {
     private static final String PHONE = "5511999999999";
 
     @Test
+    void teamRequestPersistsWaitingStateAndDoesNotRepeatRequestOnFollowUp() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.HANDOFF, true)),
+            Optional.of(new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.WAIT_TEAM, true)));
+        var first = processor.process(new WhatsAppInboundMessage("wamid.request", PHONE, "4"));
+        assertEquals(WhatsAppConversationFlow.Step.WAIT_TEAM, first.nextStep());
+        var next = processor.process(new WhatsAppInboundMessage("wamid.waiting", PHONE, "Minha dúvida é sobre o atendimento"));
+        assertEquals(WhatsAppConversationFlow.Step.WAIT_TEAM, next.nextStep());
+        verify(store, times(2)).save(new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.WAIT_TEAM, true));
+        verify(store, times(1)).appendFollowUp(PHONE, "solicitacoes_equipe", "Solicitado contato da equipe");
+    }
+
+    @Test
     void oldButtonDoesNotAnswerADifferentQuestion() {
         when(store.findByPhone(PHONE)).thenReturn(Optional.of(
             new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.WORK, true)));

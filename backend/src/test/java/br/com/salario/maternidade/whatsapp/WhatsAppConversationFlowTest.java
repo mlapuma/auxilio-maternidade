@@ -31,7 +31,7 @@ class WhatsAppConversationFlowTest {
         assertEquals(FAQ, flow.next(FAQ, "1").nextStep());
         assertTrue(flow.next(FAQ, "2").reply().contains("Não envie documentos"));
         assertTrue(flow.next(FAQ, "3").reply().contains("prazo de retorno confirmado"));
-        assertEquals(HANDOFF, flow.next(FAQ, "4").nextStep());
+        assertEquals(WAIT_TEAM, flow.next(FAQ, "4").nextStep());
         assertTrue(flow.next(FAQ, "Tenho direito ao benefício?").reply().contains("equipe responder"));
     }
 
@@ -41,6 +41,18 @@ class WhatsAppConversationFlowTest {
             assertEquals(HANDOFF, flow.next(step, "MENU").nextStep());
             assertEquals(HANDOFF, flow.next(step, "voltar").nextStep());
         }
+    }
+
+    @Test
+    void requestingTeamWaitsWithoutReopeningTheMenu() {
+        var result = flow.next(HANDOFF, "4");
+        assertEquals(WAIT_TEAM, result.nextStep());
+        assertFalse(result.reply().contains(WhatsAppConversationFlow.MENU));
+        var followUp = flow.next(WAIT_TEAM, "Gostaria de falar com alguém");
+        assertEquals(WAIT_TEAM, followUp.nextStep());
+        assertFalse(followUp.reply().contains("1 —"));
+        assertEquals(HANDOFF, flow.next(WAIT_TEAM, "MENU").nextStep());
+        assertEquals(STOPPED, flow.next(WAIT_TEAM, "SAIR").nextStep());
     }
 
     @Test
