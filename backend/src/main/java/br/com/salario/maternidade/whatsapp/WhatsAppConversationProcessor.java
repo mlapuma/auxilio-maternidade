@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class WhatsAppConversationProcessor {
     private static final Pattern LANDING_CODE = Pattern.compile("(?iu)^c[oó]digo\\s+(SM-[A-F0-9]{16})$");
+    private static final Pattern LANDING_INTENT = Pattern.compile("(?isu)^c[oó]digo\\b.*");
     private final WhatsAppConversationStore store;
     private final WhatsAppConversationFlow flow = new WhatsAppConversationFlow();
     private final WhatsAppGuidedCorrection correction;
@@ -36,15 +37,28 @@ public class WhatsAppConversationProcessor {
             else if (prompt.nextStep() == WhatsAppConversationFlow.Step.CONSENT) store.cancelPendingConsentRequests(message.sender());
             return prompt;
         }
-        var code = LANDING_CODE.matcher(message.text() == null ? "" : message.text().strip());
-        if (current.step() != WhatsAppConversationFlow.Step.STOPPED && code.matches()
-                && store.resumeLandingQuestionnaire(message.sender(), code.group(1).toUpperCase(Locale.ROOT))) {
-            store.cancelPendingReplies(message.sender());
-            return new WhatsAppConversationFlow.Transition(WhatsAppConversationFlow.Step.HANDOFF,
-                "Olá! Recebemos seu questionário e vinculamos este WhatsApp ao atendimento. "
-                + "Você não precisa responder novamente. Se desejar, envie informações complementares por aqui. "
-                + "A equipe fará a análise individual; isto não confirma direito ao benefício.\n\n"
-                + WhatsAppConversationFlow.MENU, true);
+        String incomingText = message.text() == null ? "" : message.text().strip();
+        var code = LANDING_CODE.matcher(incomingText);
+        if (current.step() != WhatsAppConversationFlow.Step.STOPPED && LANDING_INTENT.matcher(incomingText).matches()) {
+            if (code.matches() && store.resumeLandingQuestionnaire(message.sender(), code.group(1).toUpperCase(Locale.ROOT))) {
+                store.cancelPendingReplies(message.sender());
+                return new WhatsAppConversationFlow.Transition(WhatsAppConversationFlow.Step.HANDOFF,
+                    "Olá! Recebemos seu questionário e vinculamos este WhatsApp ao atendimento. "
+                    + "Você não precisa responder novamente. A equipe fará a análise individual; isto não confirma direito ao benefício.\n\n"
+                    + WhatsAppConversationFlow.MENU, true);
+            }
+            // Protocol commands never become complements, corrections or questions.
+            String guidance = "Não foi possível vincular este protocolo ao WhatsApp. Confira o código e envie a mensagem usando o mesmo número informado no formulário. O código não foi registrado como informação complementar.";
+            if (!current.consent()) {
+                store.save(new WhatsAppConversationStore.Conversation(message.sender(), WhatsAppConversationFlow.Step.CONSENT, false));
+                store.cancelPendingConsentRequests(message.sender());
+                return new WhatsAppConversationFlow.Transition(WhatsAppConversationFlow.Step.CONSENT,
+                    guidance + "\n\nSe preferir iniciar um atendimento sem esse questionário, podemos registrar suas respostas? Responda SIM ou NÃO.", false);
+            }
+            store.cancelPendingStandardReplies(message.sender());
+            return new WhatsAppConversationFlow.Transition(current.step(), guidance, true,
+                java.util.Map.of("type", "button", "body", java.util.Map.of("text", guidance), "action", java.util.Map.of("buttons", java.util.List.of(
+                    java.util.Map.of("type", "reply", "reply", java.util.Map.of("id", "entry_menu", "title", "Voltar ao menu"))))));
         }
         String normalizedInput = WhatsAppConversationFlow.normalized(message.text());
         boolean leaving = WhatsAppConversationFlow.menuCommand(message.text())

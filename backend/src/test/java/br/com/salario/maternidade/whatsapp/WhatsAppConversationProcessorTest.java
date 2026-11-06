@@ -11,6 +11,46 @@ class WhatsAppConversationProcessorTest {
     private static final String PHONE = "5511999999999";
 
     @Test
+    void rejectedProtocolNeverBecomesComplementInExistingSession() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.ADD_INFO, true)));
+        var result = processor.process(new WhatsAppInboundMessage("wamid.wrongphone", PHONE, "Codigo SM-0123456789ABCDEF"));
+        assertEquals(WhatsAppConversationFlow.Step.ADD_INFO, result.nextStep());
+        assertTrue(result.reply().contains("mesmo número informado no formulário"));
+        assertNotNull(result.interactive());
+        verify(store, never()).appendFollowUp(anyString(), anyString(), anyString());
+        verify(store, never()).save(any());
+        verify(store, never()).unlinkLead(anyString());
+    }
+
+    @Test
+    void incompleteProtocolNeverBecomesComplementOrCorrection() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.CORRECT_VALUE, true)));
+        var result = processor.process(new WhatsAppInboundMessage("wamid.badcode", PHONE, "Codigo SM-incompleto"));
+        assertTrue(result.reply().contains("Não foi possível vincular"));
+        verify(store, never()).appendFollowUp(anyString(), anyString(), anyString());
+        verify(store, never()).applyQuestionnaireCorrection(anyString(), any());
+        verify(store, never()).saveCorrectionDraft(anyString(), any());
+    }
+
+    @Test
+    void verifiedProtocolAlwaysStartsAtMainMenuDespitePreviousActiveStep() {
+        for (var step : WhatsAppConversationFlow.Step.values()) {
+            if (step == WhatsAppConversationFlow.Step.STOPPED) continue;
+            var isolated = mock(WhatsAppConversationStore.class);
+            when(isolated.findByPhone(PHONE)).thenReturn(Optional.of(new WhatsAppConversationStore.Conversation(PHONE, step, true)));
+            when(isolated.resumeLandingQuestionnaire(PHONE, "SM-0123456789ABCDEF")).thenReturn(true);
+            var result = new WhatsAppConversationProcessor(isolated).process(
+                new WhatsAppInboundMessage("wamid.entry", PHONE, "Codigo SM-0123456789ABCDEF"));
+            assertEquals(WhatsAppConversationFlow.Step.HANDOFF, result.nextStep(), step.name());
+            assertTrue(result.reply().contains("Como posso ajudar agora?"));
+            assertFalse(result.reply().contains("Informações complementares registradas"));
+            verify(isolated, never()).appendFollowUp(anyString(), anyString(), anyString());
+        }
+    }
+
+    @Test
     void teamRequestPersistsWaitingStateAndDoesNotRepeatRequestOnFollowUp() {
         when(store.findByPhone(PHONE)).thenReturn(Optional.of(
             new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.HANDOFF, true)),

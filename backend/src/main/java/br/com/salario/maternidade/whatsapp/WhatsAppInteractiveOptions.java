@@ -34,6 +34,7 @@ public final class WhatsAppInteractiveOptions {
     }
 
     public static Input parseChoice(String id) {
+        if ("entry_menu".equals(id)) return new Input("menu", null);
         for (Step step : Step.values()) {
             for (Choice choice : choices(step)) {
                 if (choice.id().equals(id)) return new Input(choice.answer(), step);
