@@ -80,12 +80,40 @@ public class WhatsAppCloudApiClient {
         } catch (org.springframework.web.client.ResourceAccessException ex) {
             log.error("WhatsApp Meta credential check: result=NETWORK_ERROR, exceptionType={}, rootCause={}",
                 ex.getClass().getSimpleName(), rootCauseType(ex));
+            if (hasCause(ex, java.security.InvalidAlgorithmParameterException.class)) {
+                logTrustStoreDiagnostics();
+            }
             return false;
         } catch (RuntimeException ex) {
             log.error("WhatsApp Meta credential check: result=ERROR, exceptionType={}, rootCause={}",
                 ex.getClass().getSimpleName(), rootCauseType(ex));
             return false;
         }
+    }
+
+    /** Diagnose empty PKIX trust anchors without weakening TLS or exposing secrets. */
+    private static void logTrustStoreDiagnostics() {
+        String configured = System.getProperty("javax.net.ssl.trustStore");
+        java.nio.file.Path javaHome = java.nio.file.Path.of(System.getProperty("java.home"));
+        java.nio.file.Path defaultStore = javaHome.resolve("lib").resolve("security").resolve("cacerts");
+        try {
+            java.nio.file.Path selected = configured != null && !configured.isBlank()
+                ? java.nio.file.Path.of(configured) : defaultStore;
+            log.error("WhatsApp TLS truststore: customPathConfigured={}, fileExists={}, javaVersion={}, javaVendor={}",
+                configured != null && !configured.isBlank(), java.nio.file.Files.isRegularFile(selected),
+                System.getProperty("java.version"), System.getProperty("java.vendor"));
+            log.error("WhatsApp TLS has no usable trust anchors. Check JVM -Djavax.net.ssl.trustStore and -Djavax.net.ssl.trustStorePassword, JAVA_HOME, and cacerts; do not disable certificate validation.");
+        } catch (RuntimeException ex) {
+            log.error("WhatsApp TLS truststore diagnostic failed: exceptionType={}", ex.getClass().getSimpleName());
+        }
+    }
+
+    private static boolean hasCause(Throwable error, Class<? extends Throwable> type) {
+        java.util.Set<Throwable> seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        for (Throwable current = error; current != null && seen.add(current); current = current.getCause()) {
+            if (type.isInstance(current)) return true;
+        }
+        return false;
     }
 
     /** Log only exception class names; messages may contain URLs or sensitive details. */
