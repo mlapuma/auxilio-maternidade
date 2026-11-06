@@ -10,6 +10,13 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class WhatsAppCloudApiClientTest {
     @Test
+    void reportsRootCauseTypeWithoutLeakingExceptionMessage() {
+        var root = new javax.net.ssl.SSLHandshakeException("sensitive endpoint details");
+        var wrapped = new org.springframework.web.client.ResourceAccessException("request failed", root);
+        assertEquals("SSLHandshakeException", WhatsAppCloudApiClient.rootCauseType(wrapped));
+    }
+
+    @Test
     void readOnlyCredentialCheckUsesMetaGet() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

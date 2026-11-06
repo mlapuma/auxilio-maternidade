@@ -77,10 +77,25 @@ public class WhatsAppCloudApiClient {
         } catch (org.springframework.web.client.RestClientResponseException ex) {
             log.error("WhatsApp Meta credential check: result=HTTP_ERROR, httpStatus={}", ex.getStatusCode().value());
             return false;
+        } catch (org.springframework.web.client.ResourceAccessException ex) {
+            log.error("WhatsApp Meta credential check: result=NETWORK_ERROR, exceptionType={}, rootCause={}",
+                ex.getClass().getSimpleName(), rootCauseType(ex));
+            return false;
         } catch (RuntimeException ex) {
-            log.error("WhatsApp Meta credential check: result=ERROR, exceptionType={}", ex.getClass().getSimpleName());
+            log.error("WhatsApp Meta credential check: result=ERROR, exceptionType={}, rootCause={}",
+                ex.getClass().getSimpleName(), rootCauseType(ex));
             return false;
         }
+    }
+
+    /** Log only exception class names; messages may contain URLs or sensitive details. */
+    static String rootCauseType(Throwable error) {
+        Throwable current = error;
+        java.util.Set<Throwable> seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        while (current.getCause() != null && seen.add(current) && !seen.contains(current.getCause())) {
+            current = current.getCause();
+        }
+        return current.getClass().getSimpleName();
     }
 
     public void sendText(String recipient, String body) {
