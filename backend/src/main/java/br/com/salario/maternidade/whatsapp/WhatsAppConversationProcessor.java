@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class WhatsAppConversationProcessor {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WhatsAppConversationProcessor.class);
     private static final Pattern LANDING_CODE = Pattern.compile("(?iu)^c[oó]digo\\s+(SM-[A-F0-9]{16})$");
     private static final Pattern LANDING_INTENT = Pattern.compile("(?isu)^c[oó]digo\\b.*");
     private final WhatsAppConversationStore store;
@@ -39,15 +40,19 @@ public class WhatsAppConversationProcessor {
         }
         String incomingText = message.text() == null ? "" : message.text().strip();
         var code = LANDING_CODE.matcher(incomingText);
+        log.info("WhatsApp conversation input: step={}, expectedStep={}, landingIntent={}, validCode={}",
+            current.step(), message.expectedStep(), LANDING_INTENT.matcher(incomingText).matches(), code.matches());
         // Sending a protocol is an explicit request to resume, including after Encerrar.
         if (LANDING_INTENT.matcher(incomingText).matches()) {
             if (code.matches() && store.resumeLandingQuestionnaire(message.sender(), code.group(1).toUpperCase(Locale.ROOT))) {
+                log.info("WhatsApp landing resume: result=LINKED, nextStep=HANDOFF");
                 store.cancelPendingReplies(message.sender());
                 return new WhatsAppConversationFlow.Transition(WhatsAppConversationFlow.Step.HANDOFF,
                     "Olá! Recebemos seu questionário e vinculamos este WhatsApp ao atendimento. "
                     + "Você não precisa responder novamente. A equipe fará a análise individual; isto não confirma direito ao benefício.\n\n"
                     + WhatsAppConversationFlow.MENU, true);
             }
+            log.info("WhatsApp landing resume: result=REJECTED");
             // Protocol commands never become complements, corrections or questions.
             String guidance = "Não foi possível vincular este protocolo ao WhatsApp. Confira o código e envie a mensagem usando o mesmo número informado no formulário. O código não foi registrado como informação complementar.";
             if (!current.consent()) {
