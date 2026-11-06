@@ -10,6 +10,22 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class WhatsAppCloudApiClientTest {
     @Test
+    void permitsBothConfiguredRecipientsAndRejectsOtherPhones() {
+        var builder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        for (String phone : java.util.List.of("5511888888888", "5511999999999")) {
+            server.expect(requestTo("https://graph.facebook.com/v23.0/123456/messages"))
+                .andExpect(jsonPath("$.to").value(phone))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        }
+        var client = new WhatsAppCloudApiClient(builder, "test-token", "123456", "v23.0", true);
+        org.springframework.test.util.ReflectionTestUtils.setField(client, "targetPhone", "5511888888888,5511999999999");
+        client.sendText("5511888888888", "Teste");
+        client.sendText("5511999999999", "Teste");
+        assertThrows(IllegalStateException.class, () -> client.sendText("5511777777777", "Teste"));
+        server.verify();
+    }
+    @Test
     void sendsSavedQuestionnaireOptionsWithSessionIdentifiers() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

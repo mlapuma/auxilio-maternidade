@@ -70,7 +70,7 @@ public class WhatsAppOutboxDispatchStore {
                 JOIN whatsapp_conversations c ON c.telefone = o.telefone
                 WHERE o.status = 'PENDENTE'
                   AND o.criado_em >= CURRENT_TIMESTAMP - INTERVAL '23 hours'
-                  AND (? = '' OR o.telefone = ?)
+                  AND (? = '' OR o.telefone = ANY(string_to_array(?, ',')))
                   -- Do not dispatch two replies to the same recipient concurrently.
                   -- A previously claimed reply may still be in flight at Meta.
                   AND NOT EXISTS (
@@ -110,7 +110,7 @@ public class WhatsAppOutboxDispatchStore {
                 JOIN whatsapp_conversations c ON c.telefone = o.telefone
                 WHERE o.id = ? AND o.status = 'ENVIANDO'
                   AND o.criado_em >= CURRENT_TIMESTAMP - INTERVAL '23 hours'
-                  AND (? = '' OR o.telefone = ?)
+                  AND (? = '' OR o.telefone = ANY(string_to_array(?, ',')))
                   AND ((o.tipo_resposta = 'STANDARD'
                         AND c.consentimento = true AND c.etapa <> 'STOPPED')
                     OR (o.tipo_resposta = 'CONSENT_REQUEST'

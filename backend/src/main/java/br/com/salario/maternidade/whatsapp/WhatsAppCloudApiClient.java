@@ -21,7 +21,7 @@ public class WhatsAppCloudApiClient {
     private final String phoneNumberId;
     private final boolean enabled;
 
-    /** Defense in depth: restrict real sends to one test recipient when configured. */
+    /** Defense in depth: restrict real sends to configured test recipients when configured. */
     @Value("${WHATSAPP_OUTBOX_TARGET_PHONE:}")
     private String targetPhone = "";
 
@@ -45,7 +45,7 @@ public class WhatsAppCloudApiClient {
         boolean tokenPresent = token != null && !token.isBlank();
         boolean phoneIdValid = phoneNumberId != null && phoneNumberId.matches("[0-9]+");
         boolean targetValid = targetPhone == null || targetPhone.isBlank()
-            || targetPhone.matches("[1-9][0-9]{7,14}");
+            || targetPhone.matches("[1-9][0-9]{7,14}(,[1-9][0-9]{7,14})*");
         log.info("WhatsApp Cloud API configuration: sendingEnabled={}, tokenPresent={}, phoneNumberIdValid={}, targetPhoneConfigured={}, targetPhoneValid={}",
             enabled, tokenPresent, phoneIdValid,
             targetPhone != null && !targetPhone.isBlank(), targetValid);
@@ -213,7 +213,7 @@ public class WhatsAppCloudApiClient {
         if (recipient == null || !recipient.matches("[1-9][0-9]{7,14}")) {
             throw new IllegalArgumentException("Invalid international recipient");
         }
-        if (targetPhone != null && !targetPhone.isBlank() && !targetPhone.equals(recipient)) {
+        if (targetPhone != null && !targetPhone.isBlank() && !java.util.Arrays.asList(targetPhone.split(",")).contains(recipient)) {
             throw new IllegalStateException("Recipient is not permitted in controlled dispatch mode");
         }
     }
