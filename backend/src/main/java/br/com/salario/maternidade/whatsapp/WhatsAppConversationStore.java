@@ -110,6 +110,40 @@ public class WhatsAppConversationStore {
             """, phone, national, phone, phone, national);
     }
 
+    /** Resume a saved questionnaire only for its consented lead's exact phone. */
+    public boolean resumeLandingQuestionnaire(String phone, String protocol) {
+        validatePhone(phone);
+        if (protocol == null || !protocol.matches("SM-[A-F0-9]{16}")) return false;
+        String national = phone.startsWith("55") && (phone.length() == 12 || phone.length() == 13)
+            ? phone.substring(2) : phone;
+        return jdbc.update("""
+            INSERT INTO whatsapp_conversations
+                (id, telefone, etapa, consentimento, lead_id, respostas_triagem, criado_em, atualizado_em)
+            SELECT ?, ?, 'HANDOFF', true, l.id,
+                   jsonb_build_object('origem', 'LANDING_PAGE', 'triagem_id', t.id,
+                       'houve_nascimento_ou_adocao', t.houve_nascimento_ou_adocao,
+                       'possui_vinculo_ou_contribuicao', t.possui_vinculo_ou_contribuicao,
+                       'deseja_atendimento', t.deseja_atendimento,
+                       'respostas_detalhadas', t.respostas_detalhadas),
+                   CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              FROM atendimentos a
+              JOIN leads l ON l.id = a.lead_id
+              JOIN LATERAL (
+                  SELECT * FROM triagens WHERE lead_id = l.id
+                   ORDER BY criado_em DESC, id DESC LIMIT 1
+              ) t ON true
+             WHERE a.codigo_publico = ?
+               AND regexp_replace(l.telefone, '[^0-9]', '', 'g') IN (?, ?)
+               AND l.consentimento_contato = true
+               AND t.deseja_atendimento = true
+            ON CONFLICT (telefone) DO UPDATE SET
+                etapa = EXCLUDED.etapa, consentimento = EXCLUDED.consentimento,
+                lead_id = EXCLUDED.lead_id, respostas_triagem = EXCLUDED.respostas_triagem,
+                atualizado_em = CURRENT_TIMESTAMP
+            WHERE whatsapp_conversations.etapa <> 'STOPPED'
+            """, UUID.randomUUID(), phone, protocol, phone, national) > 0;
+    }
+
     /** Cancels unsent replies when consent is revoked or the flow restarts. */
     /**
      * A consent reply can arrive before the queued invitation is dispatched.

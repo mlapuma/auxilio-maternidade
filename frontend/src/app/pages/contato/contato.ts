@@ -4,6 +4,7 @@ import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize, switchMap, catchError, of, map } from 'rxjs';
 import type { RespostasTriagem } from '../questionario/questionario';
+import { WhatsAppNavigation } from './whatsapp-navigation';
 
 interface AtendimentoResponse { id: string; codigoPublico: string; status: string; whatsappUrl: string | null; }
 interface LeadResponse { id: string; protocolo: string; status: string; criadoEm: string; }
@@ -17,6 +18,7 @@ interface LeadResponse { id: string; protocolo: string; status: string; criadoEm
 })
 export class Contato {
   private readonly http = inject(HttpClient);
+  private readonly whatsappNavigation = inject(WhatsAppNavigation);
   private readonly respostasTriagem: RespostasTriagem | null = history.state?.respostasTriagem ?? null;
   readonly enviando = signal(false);
   readonly protocolo = signal('');
@@ -72,19 +74,28 @@ export class Contato {
           catchError(() => of({ lead, triagemSalva: false, naoAplicavel: false })),
         );
       }),
+      switchMap(resultado => {
+        if (!resultado.triagemSalva) return of({ ...resultado, atendimento: null });
+        return this.http.post<AtendimentoResponse>('/api/atendimentos', { leadId: resultado.lead.id }).pipe(
+          map(atendimento => ({ ...resultado, atendimento })),
+          catchError(() => of({ ...resultado, atendimento: null })),
+        );
+      }),
       finalize(() => this.enviando.set(false)),
     ).subscribe({
-      next: ({ lead, triagemSalva, naoAplicavel }) => {
+      next: ({ lead, triagemSalva, naoAplicavel, atendimento }) => {
         this.protocolo.set(lead.protocolo);
         if (!triagemSalva && !naoAplicavel) this.aviso.set('Contato registrado, mas as respostas do questionário não foram salvas. Informe seu protocolo à equipe.');
         if (naoAplicavel) this.aviso.set('A equipe fará a avaliação individual das informações.');
-        if (triagemSalva) {
-          this.http.post<AtendimentoResponse>('/api/atendimentos', { leadId: lead.id }).subscribe({
-            next: atendimento => this.whatsappUrl.set(atendimento.whatsappUrl),
-            error: () => this.aviso.set('Contato registrado. A continuação pelo WhatsApp está temporariamente indisponível.'),
-          });
-        }
         form.resetForm();
+        if (triagemSalva && !atendimento?.whatsappUrl) {
+          this.aviso.set('Questionário e contato registrados. A continuação pelo WhatsApp está temporariamente indisponível. A equipe dará continuidade ao atendimento.');
+        }
+        if (atendimento?.whatsappUrl) {
+          this.whatsappUrl.set(atendimento.whatsappUrl);
+          this.aviso.set('Vamos abrir o WhatsApp. Envie a mensagem com seu protocolo para continuar sem repetir o questionário. Se não abrir, use o botão abaixo.');
+          this.whatsappNavigation.abrir(atendimento.whatsappUrl);
+        }
       },
       error: (error: HttpErrorResponse) => {
         this.erro.set(error.status === 0

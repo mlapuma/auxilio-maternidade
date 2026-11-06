@@ -4,10 +4,10 @@
     <h1>Fale com nossa equipe</h1>
     <p>Preencha seus dados para solicitar um atendimento individual. O envio não garante direito ao benefício.</p>
     @if (protocolo()) {
-      <div class="sucesso" role="status">Contato registrado com sucesso. Protocolo: <strong>{{ protocolo() }}</strong>. Aguarde o retorno da equipe.</div>
+      <div class="sucesso" role="status">Contato registrado com sucesso. Protocolo: <strong>{{ protocolo() }}</strong>.</div>
       @if (aviso()) { <p role="status">{{ aviso() }}</p> }
       @if (whatsappUrl()) {
-        <a class="whatsapp-link" [href]="whatsappUrl()" target="_blank" rel="noopener noreferrer">Continuar atendimento pelo WhatsApp</a>
+        <a class="whatsapp-link" [href]="whatsappUrl()">Continuar atendimento no WhatsApp</a>
       }
       <button type="button" (click)="protocolo.set('')">Enviar outro contato</button>
     } @else {
@@ -18,7 +18,7 @@
         <label class="consentimento"><input type="checkbox" name="consentimento" [(ngModel)]="consentimento" required />
           Concordo que meus dados de contato sejam utilizados pelo escritório para responder à minha solicitação. Consulte a política de privacidade antes de enviar.</label>
         @if (erro()) { <p role="alert" class="erro">{{ erro() }}</p> }
-        <button type="submit" [disabled]="form.invalid || !consentimento || enviando()">{{ enviando() ? 'Enviando...' : 'Solicitar contato' }}</button>
+        <button type="submit" [disabled]="form.invalid || !consentimento || enviando()">{{ enviando() ? 'Salvando atendimento...' : 'Salvar e continuar atendimento' }}</button>
       </form>
     }
     <p class="aviso">Não envie CPF, documentos ou informações de saúde neste formulário.</p>

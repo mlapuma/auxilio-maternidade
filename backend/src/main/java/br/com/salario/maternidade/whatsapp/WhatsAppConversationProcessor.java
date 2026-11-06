@@ -1,6 +1,7 @@
 package br.com.salario.maternidade.whatsapp;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 
 /**
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class WhatsAppConversationProcessor {
+    private static final Pattern LANDING_CODE = Pattern.compile("(?iu)^c[oó]digo\\s+(SM-[A-F0-9]{16})$");
     private final WhatsAppConversationStore store;
     private final WhatsAppConversationFlow flow = new WhatsAppConversationFlow();
 
@@ -20,6 +22,15 @@ public class WhatsAppConversationProcessor {
         var current = store.findByPhone(message.sender())
             .orElse(new WhatsAppConversationStore.Conversation(
                 message.sender(), WhatsAppConversationFlow.Step.START, false));
+        var code = LANDING_CODE.matcher(message.text() == null ? "" : message.text().strip());
+        if (current.step() != WhatsAppConversationFlow.Step.STOPPED && code.matches()
+                && store.resumeLandingQuestionnaire(message.sender(), code.group(1).toUpperCase(Locale.ROOT))) {
+            store.cancelPendingReplies(message.sender());
+            return new WhatsAppConversationFlow.Transition(WhatsAppConversationFlow.Step.HANDOFF,
+                "Olá! Recebemos seu questionário e vinculamos este WhatsApp ao atendimento. "
+                + "Você não precisa responder novamente. Se desejar, envie informações complementares por aqui. "
+                + "A equipe fará a análise individual; isto não confirma direito ao benefício. Digite SAIR para encerrar.", true);
+        }
         var transition = flow.next(current.step(), message.text());
         boolean consent = current.consent();
         if (current.step() == WhatsAppConversationFlow.Step.CONSENT

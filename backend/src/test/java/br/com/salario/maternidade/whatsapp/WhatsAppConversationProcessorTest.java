@@ -11,6 +11,39 @@ class WhatsAppConversationProcessorTest {
     private static final String PHONE = "5511999999999";
 
     @Test
+    void resumesVerifiedLandingQuestionnaireWithoutRepeatingQuestions() {
+        String protocol = "SM-0123456789ABCDEF";
+        when(store.findByPhone(PHONE)).thenReturn(Optional.empty());
+        when(store.resumeLandingQuestionnaire(PHONE, protocol)).thenReturn(true);
+        var transition = processor.process(new WhatsAppInboundMessage("wamid.landing", PHONE, "Codigo " + protocol));
+        assertEquals(WhatsAppConversationFlow.Step.HANDOFF, transition.nextStep());
+        assertTrue(transition.reply().contains("não precisa responder novamente"));
+        assertTrue(transition.requiresHuman());
+        verify(store).cancelPendingReplies(PHONE);
+        verify(store, never()).save(any());
+    }
+
+    @Test
+    void unmatchedLandingCodeDoesNotGrantConsentOrRevealAnswers() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.empty());
+        var transition = processor.process(new WhatsAppInboundMessage("wamid.unknown", PHONE,
+            "Codigo SM-0123456789ABCDEF"));
+        assertEquals(WhatsAppConversationFlow.Step.CONSENT, transition.nextStep());
+        verify(store).save(new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.CONSENT, false));
+        verify(store, never()).cancelPendingReplies(PHONE);
+    }
+
+    @Test
+    void landingCodeDoesNotOverridePreviousOptOut() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.STOPPED, false)));
+        var transition = processor.process(new WhatsAppInboundMessage("wamid.stopped", PHONE,
+            "Codigo SM-0123456789ABCDEF"));
+        assertEquals(WhatsAppConversationFlow.Step.STOPPED, transition.nextStep());
+        verify(store, never()).resumeLandingQuestionnaire(anyString(), anyString());
+    }
+
+    @Test
     void newConversationRequestsConsent() {
         when(store.findByPhone(PHONE)).thenReturn(Optional.empty());
         var transition = processor.process(new WhatsAppInboundMessage("wamid.1", PHONE, "Oi"));
