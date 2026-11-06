@@ -104,8 +104,11 @@ public class WhatsAppWebhookService {
                     if (historyStore != null) {
                         historyStore.recordInbound(message);
                     }
-                    // Do not queue acknowledgements after opt-out/refusal: the
-                    // dispatcher correctly forbids sending in STOPPED state.
+                    // A single non-sensitive acknowledgement is allowed only for
+                    // the person's explicit stop/refusal, never unsolicited text after closure.
+                    if (replyOutbox != null && transition.closureAcknowledgement()) {
+                        replyOutbox.enqueueClosureAck(message.messageId(), message.sender(), transition.reply());
+                    }
                     if (replyOutbox != null
                             && transition.nextStep() != WhatsAppConversationFlow.Step.STOPPED) {
                         if (transition.interactive() != null) {

@@ -81,7 +81,9 @@ public class WhatsAppOutboxDispatchStore {
                   AND ((o.tipo_resposta = 'STANDARD'
                         AND c.consentimento = true AND c.etapa <> 'STOPPED')
                     OR (o.tipo_resposta = 'CONSENT_REQUEST'
-                        AND c.consentimento = false AND c.etapa = 'CONSENT'))
+                        AND c.consentimento = false AND c.etapa = 'CONSENT')
+                    OR (o.tipo_resposta = 'CLOSURE_ACK'
+                        AND c.consentimento = false AND c.etapa = 'STOPPED'))
                 ORDER BY o.criado_em, o.id
                 FOR UPDATE OF o, c SKIP LOCKED
                 LIMIT 1
@@ -112,7 +114,9 @@ public class WhatsAppOutboxDispatchStore {
                   AND ((o.tipo_resposta = 'STANDARD'
                         AND c.consentimento = true AND c.etapa <> 'STOPPED')
                     OR (o.tipo_resposta = 'CONSENT_REQUEST'
-                        AND c.consentimento = false AND c.etapa = 'CONSENT'))
+                        AND c.consentimento = false AND c.etapa = 'CONSENT')
+                    OR (o.tipo_resposta = 'CLOSURE_ACK'
+                        AND c.consentimento = false AND c.etapa = 'STOPPED'))
             )
             """, Boolean.class, id, targetPhone == null ? "" : targetPhone,
                 targetPhone == null ? "" : targetPhone);

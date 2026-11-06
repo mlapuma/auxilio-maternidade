@@ -17,18 +17,17 @@ class WhatsAppConversationFlowTest {
     }
 
     @Test
-    void recordsComplementAndCorrectionRequestsThenReturnsToMenu() {
-        assertEquals(HANDOFF, flow.next(ADD_INFO, "Informação adicional").nextStep());
+    void completesComplementWithoutReturningToMenuAndDoesNotFakeCorrections() {
+        assertEquals(ACTION_DONE, flow.next(ADD_INFO, "Informação adicional").nextStep());
         var corrected = flow.next(CORRECT_INFO, "Minha resposta anterior estava incorreta");
-        assertEquals(HANDOFF, corrected.nextStep());
-        assertTrue(corrected.reply().contains("original foi preservada"));
+        assertEquals(CORRECT_INFO, corrected.nextStep());
         assertEquals(CORRECT_INFO, flow.next(CORRECT_INFO, " ").nextStep());
         assertEquals(ADD_INFO, flow.next(ADD_INFO, "a".repeat(4097)).nextStep());
     }
 
     @Test
     void faqAnswersOperationalQuestionsAndEscalatesOtherQuestions() {
-        assertEquals(FAQ, flow.next(FAQ, "1").nextStep());
+        assertEquals(FAQ_ANSWER, flow.next(FAQ, "1").nextStep());
         assertTrue(flow.next(FAQ, "2").reply().contains("Não envie documentos"));
         assertTrue(flow.next(FAQ, "3").reply().contains("prazo de retorno confirmado"));
         assertEquals(WAIT_TEAM, flow.next(FAQ, "4").nextStep());

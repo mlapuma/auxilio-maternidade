@@ -26,7 +26,7 @@ public final class WhatsAppGuidedCorrection {
         var saved = store.findSavedQuestionnaire(phone);
         if (saved.isEmpty() || WhatsAppQuestionnaire.QUESTIONS.stream().noneMatch(q -> saved.get().answers().containsKey(q.title()))) {
             store.clearCorrectionDraft(phone);
-            return plain(HANDOFF, "Não localizei um questionário vinculado a este WhatsApp. Digite 4 para solicitar ajuda da equipe.\n\n" + WhatsAppConversationFlow.MENU);
+            return plain(ACTION_DONE, "Não localizei um questionário vinculado a este WhatsApp. Solicite ajuda pelo botão Falar com a equipe.\n\n" + WhatsAppConversationFlow.nextActions());
         }
         var draft = new CorrectionDraft(saved.get().triageId(), new LinkedHashMap<>(saved.get().answers()),
             new LinkedHashMap<>(saved.get().answers()), "", nonce());
@@ -92,7 +92,7 @@ public final class WhatsAppGuidedCorrection {
             if (!Set.of("yes", "sim", "confirmar", "1").contains(WhatsAppConversationFlow.normalized(value))) return confirmation(draft);
             if (draft.original().equals(draft.candidate())) {
                 store.clearCorrectionDraft(phone);
-                return plain(HANDOFF, "Nenhuma resposta foi alterada.\n\n" + WhatsAppConversationFlow.MENU);
+                return plain(ACTION_DONE, "Nenhuma resposta foi alterada.\n\n" + WhatsAppConversationFlow.nextActions());
             }
             if (!store.applyQuestionnaireCorrection(phone, draft)) {
                 var refreshed = start(phone);
@@ -102,7 +102,7 @@ public final class WhatsAppGuidedCorrection {
                 return new WhatsAppConversationFlow.Transition(refreshed.nextStep(), body, true, interactive);
             }
             store.appendFollowUp(phone, "correcoes", changes(draft));
-            return plain(HANDOFF, "Correção confirmada e questionário atualizado. A versão anterior foi preservada no histórico para a equipe.\n\n" + WhatsAppConversationFlow.MENU);
+            return plain(ACTION_DONE, "Correção confirmada e questionário atualizado. A versão anterior foi preservada no histórico para a equipe.\n\n" + WhatsAppConversationFlow.nextActions());
         }
         return questions(draft);
     }

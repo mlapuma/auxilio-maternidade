@@ -24,6 +24,11 @@ public final class WhatsAppInteractiveOptions {
             case ADD_INFO -> List.of(new Choice("add_menu", "Voltar ao menu", "menu"));
             case CORRECT_INFO -> List.of(new Choice("correct_menu", "Voltar ao menu", "menu"));
             case WAIT_TEAM -> List.of(new Choice("wait_team_menu", "Voltar ao menu", "menu"));
+            case ACTION_DONE -> List.of(new Choice("done_menu", "Voltar ao menu", "menu"),
+                new Choice("done_team", "Falar com a equipe", "4"), new Choice("done_stop", "Encerrar", "sair"));
+            case FAQ_ANSWER -> List.of(new Choice("faq_answer_more", "Outra dúvida", "duvidas"),
+                new Choice("faq_answer_team", "Falar com a equipe", "4"), new Choice("faq_answer_menu", "Voltar ao menu", "menu"));
+            case STOPPED -> List.of(new Choice("stopped_restart", "Reiniciar", "iniciar"));
             default -> List.of();
         };
     }

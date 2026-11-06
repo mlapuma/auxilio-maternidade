@@ -43,7 +43,7 @@ class WhatsAppGuidedCorrectionTest {
         verify(store, never()).applyQuestionnaireCorrection(anyString(), any());
         when(store.applyQuestionnaireCorrection(eq(PHONE), any())).thenReturn(true);
         var result = correction.process(PHONE, CORRECT_CONFIRM, "SIM");
-        assertEquals(HANDOFF, result.nextStep());
+        assertEquals(ACTION_DONE, result.nextStep());
         verify(store).applyQuestionnaireCorrection(eq(PHONE), argThat(d ->
             d.candidate().get(WhatsAppQuestionnaire.question("trabalho").title()).equals("Sim, com carteira assinada")
             && d.original().get(WhatsAppQuestionnaire.question("trabalho").title()).equals("Não estou trabalhando")));
@@ -100,7 +100,7 @@ class WhatsAppGuidedCorrectionTest {
     void noQuestionnaireDoesNotExposeAnyAnswers() {
         when(store.findSavedQuestionnaire(PHONE)).thenReturn(Optional.empty());
         var result = correction.start(PHONE);
-        assertEquals(HANDOFF, result.nextStep());
+        assertEquals(ACTION_DONE, result.nextStep());
         assertFalse(result.reply().contains("Não estou trabalhando"));
         verify(store, never()).saveCorrectionDraft(anyString(), any());
     }

@@ -24,12 +24,17 @@ public class WhatsAppConversationProcessor {
         var current = store.findByPhone(message.sender())
             .orElse(new WhatsAppConversationStore.Conversation(
                 message.sender(), WhatsAppConversationFlow.Step.START, false));
-        if (message.expectedStep() != null && message.expectedStep() != current.step()) {
+        if (message.expectedStep() != null && message.expectedStep() != current.step()
+                && !WhatsAppConversationFlow.stopCommand(message.text()) && !WhatsAppConversationFlow.menuCommand(message.text())) {
             // An old button must not answer a different question or grant new consent.
-            if (current.consent() && WhatsAppGuidedCorrection.isCorrection(current.step())) {
-                return correction.process(message.sender(), current.step(), "");
+            var prompt = current.consent() && WhatsAppGuidedCorrection.isCorrection(current.step())
+                ? correction.process(message.sender(), current.step(), "") : flow.next(current.step(), "");
+            if (prompt.nextStep() != current.step()) {
+                store.save(new WhatsAppConversationStore.Conversation(message.sender(), prompt.nextStep(), current.consent()));
             }
-            return flow.next(current.step(), "");
+            if (current.consent()) store.cancelPendingStandardReplies(message.sender());
+            else if (prompt.nextStep() == WhatsAppConversationFlow.Step.CONSENT) store.cancelPendingConsentRequests(message.sender());
+            return prompt;
         }
         var code = LANDING_CODE.matcher(message.text() == null ? "" : message.text().strip());
         if (current.step() != WhatsAppConversationFlow.Step.STOPPED && code.matches()
@@ -44,7 +49,7 @@ public class WhatsAppConversationProcessor {
         String normalizedInput = WhatsAppConversationFlow.normalized(message.text());
         boolean leaving = WhatsAppConversationFlow.menuCommand(message.text())
             || java.util.Set.of("sair", "parar", "cancelar", "stop", "unsubscribe").contains(normalizedInput);
-        boolean enteringCorrection = current.step() == WhatsAppConversationFlow.Step.HANDOFF
+        boolean enteringCorrection = (current.step() == WhatsAppConversationFlow.Step.HANDOFF || current.step() == WhatsAppConversationFlow.Step.ACTION_DONE)
             && java.util.Set.of("2", "corrigir", "corrigir resposta").contains(normalizedInput);
         var transition = current.consent() && !leaving && (enteringCorrection || WhatsAppGuidedCorrection.isCorrection(current.step()))
             ? (enteringCorrection ? correction.start(message.sender()) : correction.process(message.sender(), current.step(), message.text()))
@@ -61,19 +66,22 @@ public class WhatsAppConversationProcessor {
         store.save(new WhatsAppConversationStore.Conversation(
             message.sender(), transition.nextStep(), consent));
         if (consent && transition.nextStep() != WhatsAppConversationFlow.Step.STOPPED
-                && !WhatsAppConversationFlow.menuCommand(message.text())) {
+                && !WhatsAppConversationFlow.menuCommand(message.text()) && !WhatsAppConversationFlow.stopCommand(message.text())) {
             if (current.step() == WhatsAppConversationFlow.Step.ADD_INFO
-                    && transition.nextStep() == WhatsAppConversationFlow.Step.HANDOFF) {
+                    && transition.nextStep() == WhatsAppConversationFlow.Step.ACTION_DONE) {
                 store.appendFollowUp(message.sender(), "complementos", message.text().strip());
             } else if ((current.step() == WhatsAppConversationFlow.Step.HANDOFF
-                    || current.step() == WhatsAppConversationFlow.Step.FAQ)
+                    || current.step() == WhatsAppConversationFlow.Step.ACTION_DONE
+                    || current.step() == WhatsAppConversationFlow.Step.FAQ_ANSWER || current.step() == WhatsAppConversationFlow.Step.FAQ)
                     && WhatsAppConversationFlow.teamCommand(message.text())) {
                 store.appendFollowUp(message.sender(), "solicitacoes_equipe", "Solicitado contato da equipe");
-            } else if (current.step() == WhatsAppConversationFlow.Step.FAQ
-                    && transition.nextStep() == WhatsAppConversationFlow.Step.HANDOFF) {
+            } else if ((current.step() == WhatsAppConversationFlow.Step.FAQ
+                    || current.step() == WhatsAppConversationFlow.Step.FAQ_ANSWER || current.step() == WhatsAppConversationFlow.Step.HANDOFF
+                    || current.step() == WhatsAppConversationFlow.Step.ACTION_DONE)
+                    && transition.nextStep() == WhatsAppConversationFlow.Step.WAIT_TEAM) {
                 store.appendFollowUp(message.sender(), "duvidas", message.text().strip());
             }
-            if (current.step() == WhatsAppConversationFlow.Step.HANDOFF
+            if ((current.step() == WhatsAppConversationFlow.Step.HANDOFF || current.step() == WhatsAppConversationFlow.Step.ACTION_DONE)
                     && java.util.Set.of("5", "andamento", "status").contains(WhatsAppConversationFlow.normalized(message.text()))) {
                 String status = store.findLinkedLeadStatus(message.sender()).orElse("");
                 String summary = switch (status) {
@@ -82,8 +90,8 @@ public class WhatsAppConversationProcessor {
                     case "CONCLUIDO" -> "Seu atendimento foi marcado como concluído pela equipe. Isso não indica aprovação de benefício. Digite 4 se precisar de novo contato.";
                     default -> "Ainda não há um andamento disponível para este WhatsApp. Digite 4 para solicitar contato da equipe.";
                 };
-                transition = new WhatsAppConversationFlow.Transition(WhatsAppConversationFlow.Step.HANDOFF,
-                    summary + "\n\n" + WhatsAppConversationFlow.MENU, true);
+                transition = new WhatsAppConversationFlow.Transition(WhatsAppConversationFlow.Step.ACTION_DONE,
+                    summary + "\n\n" + WhatsAppConversationFlow.nextActions(), true);
             }
         }
         // A new consent prompt supersedes older, unsent invitations.
@@ -96,7 +104,8 @@ public class WhatsAppConversationProcessor {
                 && transition.nextStep() == WhatsAppConversationFlow.Step.BIRTH) {
             store.cancelPendingConsentRequests(message.sender());
         }
-        if (transition.nextStep() == WhatsAppConversationFlow.Step.STOPPED
+        if ((transition.nextStep() == WhatsAppConversationFlow.Step.STOPPED
+                && (current.step() != WhatsAppConversationFlow.Step.STOPPED || WhatsAppConversationFlow.stopCommand(message.text())))
                 || (current.step() == WhatsAppConversationFlow.Step.STOPPED
                     && transition.nextStep() == WhatsAppConversationFlow.Step.CONSENT)) {
             store.clearScreeningAnswers(message.sender());

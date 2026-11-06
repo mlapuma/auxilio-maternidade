@@ -23,6 +23,16 @@ public class WhatsAppReplyOutbox {
 
     public void enqueue(String inboundMessageId, String phone, String reply,
             boolean consentRequest, java.util.Map<String, Object> interactive) {
+        enqueueTyped(inboundMessageId, phone, reply, consentRequest ? "CONSENT_REQUEST" : "STANDARD", interactive);
+    }
+
+    public void enqueueClosureAck(String inboundMessageId, String phone, String reply) {
+        if (reply == null || reply.length() > 512) throw new IllegalArgumentException("Invalid closure acknowledgement");
+        enqueueTyped(inboundMessageId, phone, reply, "CLOSURE_ACK", null);
+    }
+
+    private void enqueueTyped(String inboundMessageId, String phone, String reply, String type,
+            java.util.Map<String, Object> interactive) {
         if (inboundMessageId == null || inboundMessageId.isBlank() || inboundMessageId.length() > 255) {
             throw new IllegalArgumentException("Invalid inbound message id");
         }
@@ -39,7 +49,7 @@ public class WhatsAppReplyOutbox {
                 (SELECT etapa FROM whatsapp_conversations WHERE telefone = ?), ?)
             ON CONFLICT (mensagem_entrada_id) DO NOTHING
             """, UUID.randomUUID(), inboundMessageId, phone, reply,
-            consentRequest ? "CONSENT_REQUEST" : "STANDARD", phone, encode(interactive));
+            type, phone, encode(interactive));
     }
 
     private static String encode(java.util.Map<String, Object> interactive) {

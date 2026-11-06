@@ -96,6 +96,7 @@ class WhatsAppWebhookFullFlowTest {
         verify(outbox).enqueue(eq("wamid.refusal.1"), eq(PHONE), anyString(), eq(true));
         verify(outbox, never()).enqueue(eq("wamid.refusal.2"), eq(PHONE), anyString());
         verify(outbox, never()).enqueue(eq("wamid.refusal.2"), eq(PHONE), anyString(), anyBoolean());
+        verify(outbox).enqueueClosureAck(eq("wamid.refusal.2"), eq(PHONE), anyString());
     }
 
     private static void acceptTwice(WhatsAppWebhookService service, String id, String body)
