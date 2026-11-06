@@ -3,9 +3,10 @@ import { provideHttpClient, withInterceptors, HttpInterceptorFn } from '@angular
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 
-// Static hosting does not proxy /api to the separately hosted backend.
+// Local development uses the Angular proxy; static hosting uses the Render API.
 const apiInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!req.url.startsWith('/api/')) return next(req);
+  const localHosts = ['localhost', '127.0.0.1', '[::1]'];
+  if (!req.url.startsWith('/api/') || localHosts.includes(window.location.hostname)) return next(req);
   return next(req.clone({ url: 'https://auxilio-maternidade.onrender.com' + req.url }));
 };
 
