@@ -29,7 +29,8 @@ public class WhatsAppConversationProcessor {
             return new WhatsAppConversationFlow.Transition(WhatsAppConversationFlow.Step.HANDOFF,
                 "Olá! Recebemos seu questionário e vinculamos este WhatsApp ao atendimento. "
                 + "Você não precisa responder novamente. Se desejar, envie informações complementares por aqui. "
-                + "A equipe fará a análise individual; isto não confirma direito ao benefício. Digite SAIR para encerrar.", true);
+                + "A equipe fará a análise individual; isto não confirma direito ao benefício.\n\n"
+                + WhatsAppConversationFlow.MENU, true);
         }
         var transition = flow.next(current.step(), message.text());
         boolean consent = current.consent();
@@ -42,6 +43,35 @@ public class WhatsAppConversationProcessor {
         }
         store.save(new WhatsAppConversationStore.Conversation(
             message.sender(), transition.nextStep(), consent));
+        if (consent && transition.nextStep() != WhatsAppConversationFlow.Step.STOPPED
+                && !WhatsAppConversationFlow.menuCommand(message.text())) {
+            if ((current.step() == WhatsAppConversationFlow.Step.ADD_INFO
+                    || current.step() == WhatsAppConversationFlow.Step.CORRECT_INFO)
+                    && transition.nextStep() == WhatsAppConversationFlow.Step.HANDOFF) {
+                store.appendFollowUp(message.sender(),
+                    current.step() == WhatsAppConversationFlow.Step.ADD_INFO ? "complementos" : "correcoes",
+                    message.text().strip());
+            } else if ((current.step() == WhatsAppConversationFlow.Step.HANDOFF
+                    || current.step() == WhatsAppConversationFlow.Step.FAQ)
+                    && WhatsAppConversationFlow.teamCommand(message.text())) {
+                store.appendFollowUp(message.sender(), "solicitacoes_equipe", "Solicitado contato da equipe");
+            } else if (current.step() == WhatsAppConversationFlow.Step.FAQ
+                    && transition.nextStep() == WhatsAppConversationFlow.Step.HANDOFF) {
+                store.appendFollowUp(message.sender(), "duvidas", message.text().strip());
+            }
+            if (current.step() == WhatsAppConversationFlow.Step.HANDOFF
+                    && java.util.Set.of("5", "andamento", "status").contains(WhatsAppConversationFlow.normalized(message.text()))) {
+                String status = store.findLinkedLeadStatus(message.sender()).orElse("");
+                String summary = switch (status) {
+                    case "NOVO" -> "Sua solicitação foi recebida e aguarda atendimento da equipe.";
+                    case "EM_ATENDIMENTO" -> "Seu atendimento está em andamento com a equipe.";
+                    case "CONCLUIDO" -> "Seu atendimento foi marcado como concluído pela equipe. Isso não indica aprovação de benefício. Digite 4 se precisar de novo contato.";
+                    default -> "Ainda não há um andamento disponível para este WhatsApp. Digite 4 para solicitar contato da equipe.";
+                };
+                transition = new WhatsAppConversationFlow.Transition(WhatsAppConversationFlow.Step.HANDOFF,
+                    summary + "\n\n" + WhatsAppConversationFlow.MENU, true);
+            }
+        }
         // A new consent prompt supersedes older, unsent invitations.
         // The webhook will enqueue only the latest prompt after this transition.
         if (transition.nextStep() == WhatsAppConversationFlow.Step.CONSENT

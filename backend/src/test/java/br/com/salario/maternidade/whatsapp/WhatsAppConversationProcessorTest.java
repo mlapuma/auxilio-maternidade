@@ -11,6 +11,53 @@ class WhatsAppConversationProcessorTest {
     private static final String PHONE = "5511999999999";
 
     @Test
+    void savesCorrectionsSeparatelyWithoutOverwritingQuestionnaire() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.CORRECT_INFO, true)));
+        processor.process(new WhatsAppInboundMessage("wamid.correction", PHONE, "Corrigir a resposta sobre trabalho"));
+        verify(store).appendFollowUp(PHONE, "correcoes", "Corrigir a resposta sobre trabalho");
+        verify(store, never()).saveScreeningAnswer(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void menuDoesNotBecomeAComplement() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.ADD_INFO, true)));
+        processor.process(new WhatsAppInboundMessage("wamid.menu", PHONE, "MENU"));
+        verify(store, never()).appendFollowUp(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void recordsTeamRequestAndCustomQuestion() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.HANDOFF, true)),
+            Optional.of(new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.FAQ, true)));
+        processor.process(new WhatsAppInboundMessage("wamid.team", PHONE, "4"));
+        processor.process(new WhatsAppInboundMessage("wamid.question", PHONE, "Posso complementar depois?"));
+        verify(store).appendFollowUp(PHONE, "solicitacoes_equipe", "Solicitado contato da equipe");
+        verify(store).appendFollowUp(PHONE, "duvidas", "Posso complementar depois?");
+    }
+
+    @Test
+    void showsActualLeadStatusWithoutPromisingBenefitApproval() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.HANDOFF, true)));
+        when(store.findLinkedLeadStatus(PHONE)).thenReturn(Optional.of("CONCLUIDO"));
+        var result = processor.process(new WhatsAppInboundMessage("wamid.status", PHONE, "5"));
+        assertTrue(result.reply().contains("não indica aprovação"));
+        verify(store, never()).appendFollowUp(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void stopInCorrectionDoesNotStoreTheCommandAsAnAnswer() {
+        when(store.findByPhone(PHONE)).thenReturn(Optional.of(
+            new WhatsAppConversationStore.Conversation(PHONE, WhatsAppConversationFlow.Step.CORRECT_INFO, true)));
+        var result = processor.process(new WhatsAppInboundMessage("wamid.stop", PHONE, "SAIR"));
+        assertEquals(WhatsAppConversationFlow.Step.STOPPED, result.nextStep());
+        verify(store, never()).appendFollowUp(anyString(), anyString(), anyString());
+    }
+
+    @Test
     void resumesVerifiedLandingQuestionnaireWithoutRepeatingQuestions() {
         String protocol = "SM-0123456789ABCDEF";
         when(store.findByPhone(PHONE)).thenReturn(Optional.empty());

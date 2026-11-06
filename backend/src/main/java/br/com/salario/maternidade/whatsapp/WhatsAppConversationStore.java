@@ -84,6 +84,32 @@ public class WhatsAppConversationStore {
             """, phone);
     }
 
+    /** Append requests for review without overwriting the submitted questionnaire. */
+    public void appendFollowUp(String phone, String type, String text) {
+        validatePhone(phone);
+        if (!java.util.Set.of("complementos", "correcoes", "duvidas", "solicitacoes_equipe").contains(type)
+                || text == null || text.isBlank() || text.length() > 4096) {
+            throw new IllegalArgumentException("Invalid follow-up");
+        }
+        jdbc.update("""
+            UPDATE whatsapp_conversations
+               SET respostas_triagem = jsonb_set(COALESCE(respostas_triagem, '{}'::jsonb),
+                   ARRAY[?]::text[], COALESCE(respostas_triagem -> ?, '[]'::jsonb)
+                   || jsonb_build_array(jsonb_build_object('texto', ?::text, 'registrado_em', CURRENT_TIMESTAMP)), true),
+                   atualizado_em = CURRENT_TIMESTAMP
+             WHERE telefone = ? AND consentimento = true AND etapa <> 'STOPPED'
+            """, type, type, text, phone);
+    }
+
+    public Optional<String> findLinkedLeadStatus(String phone) {
+        validatePhone(phone);
+        return jdbc.query("""
+            SELECT l.status FROM whatsapp_conversations c JOIN leads l ON l.id = c.lead_id
+             WHERE c.telefone = ? AND c.consentimento = true AND c.etapa <> 'STOPPED'
+               AND l.consentimento_contato = true
+            """, rs -> rs.next() ? Optional.of(rs.getString("status")) : Optional.empty(), phone);
+    }
+
     /**
      * Associates only a uniquely matching existing lead that also consented to contact.
      * Brazilian leads may store a national number (DDD + subscriber) while
@@ -138,7 +164,10 @@ public class WhatsAppConversationStore {
                AND t.deseja_atendimento = true
             ON CONFLICT (telefone) DO UPDATE SET
                 etapa = EXCLUDED.etapa, consentimento = EXCLUDED.consentimento,
-                lead_id = EXCLUDED.lead_id, respostas_triagem = EXCLUDED.respostas_triagem,
+                respostas_triagem = CASE WHEN whatsapp_conversations.lead_id = EXCLUDED.lead_id
+                    THEN COALESCE(whatsapp_conversations.respostas_triagem, '{}'::jsonb) || EXCLUDED.respostas_triagem
+                    ELSE EXCLUDED.respostas_triagem END,
+                lead_id = EXCLUDED.lead_id,
                 atualizado_em = CURRENT_TIMESTAMP
             WHERE whatsapp_conversations.etapa <> 'STOPPED'
             """, UUID.randomUUID(), phone, protocol, phone, national) > 0;
