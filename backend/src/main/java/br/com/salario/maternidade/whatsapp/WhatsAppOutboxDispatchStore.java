@@ -13,7 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Repository
 public class WhatsAppOutboxDispatchStore {
-    public record PendingReply(UUID id, String phone, String body) {}
+    public record PendingReply(UUID id, String phone, String body, String inboundMessageId) {
+        public PendingReply(UUID id, String phone, String body) {
+            this(id, phone, body, null);
+        }
+    }
 
     private final JdbcTemplate jdbc;
 
@@ -76,12 +80,12 @@ public class WhatsAppOutboxDispatchStore {
                 FOR UPDATE OF o, c SKIP LOCKED
                 LIMIT 1
             )
-            RETURNING id, telefone, corpo
+            RETURNING id, telefone, corpo, mensagem_entrada_id
             """, rs -> rs.next()
                 ? Optional.of(new PendingReply(
                     (UUID) rs.getObject("id"),
                     rs.getString("telefone"),
-                    rs.getString("corpo")))
+                    rs.getString("corpo"), rs.getString("mensagem_entrada_id")))
                 : Optional.empty(), targetPhone == null ? "" : targetPhone,
                 targetPhone == null ? "" : targetPhone);
     }

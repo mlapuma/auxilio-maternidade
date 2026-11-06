@@ -127,19 +127,7 @@ public class WhatsAppCloudApiClient {
     }
 
     public void sendText(String recipient, String body) {
-        if (!enabled) throw new IllegalStateException("WhatsApp sending is disabled");
-        if (token.isBlank() || phoneNumberId.isBlank()) {
-            throw new IllegalStateException("WhatsApp credentials are not configured");
-        }
-        if (!phoneNumberId.matches("[0-9]+")) {
-            throw new IllegalStateException("Invalid WhatsApp phone number ID");
-        }
-        if (recipient == null || !recipient.matches("[1-9][0-9]{7,14}")) {
-            throw new IllegalArgumentException("Invalid international recipient");
-        }
-        if (targetPhone != null && !targetPhone.isBlank() && !targetPhone.equals(recipient)) {
-            throw new IllegalStateException("Recipient is not permitted in controlled dispatch mode");
-        }
+        validateRecipient(recipient);
         if (body == null || body.isBlank() || body.length() > 4096) {
             throw new IllegalArgumentException("Invalid WhatsApp text");
         }
@@ -155,5 +143,40 @@ public class WhatsAppCloudApiClient {
                 "text", Map.of("preview_url", false, "body", body)))
             .retrieve()
             .toBodilessEntity();
+    }
+
+    /** Also marks the customer's incoming message as read, as required by Meta. */
+    public void sendTypingIndicator(String recipient, String inboundMessageId) {
+        validateRecipient(recipient);
+        if (inboundMessageId == null || inboundMessageId.isBlank() || inboundMessageId.length() > 255) {
+            throw new IllegalArgumentException("Invalid inbound message id");
+        }
+        client.post()
+            .uri("/{phoneNumberId}/messages", phoneNumberId)
+            .headers(headers -> headers.setBearerAuth(token.trim()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(Map.of(
+                "messaging_product", "whatsapp",
+                "status", "read",
+                "message_id", inboundMessageId,
+                "typing_indicator", Map.of("type", "text")))
+            .retrieve()
+            .toBodilessEntity();
+    }
+
+    private void validateRecipient(String recipient) {
+        if (!enabled) throw new IllegalStateException("WhatsApp sending is disabled");
+        if (token.isBlank() || phoneNumberId.isBlank()) {
+            throw new IllegalStateException("WhatsApp credentials are not configured");
+        }
+        if (!phoneNumberId.matches("[0-9]+")) {
+            throw new IllegalStateException("Invalid WhatsApp phone number ID");
+        }
+        if (recipient == null || !recipient.matches("[1-9][0-9]{7,14}")) {
+            throw new IllegalArgumentException("Invalid international recipient");
+        }
+        if (targetPhone != null && !targetPhone.isBlank() && !targetPhone.equals(recipient)) {
+            throw new IllegalStateException("Recipient is not permitted in controlled dispatch mode");
+        }
     }
 }

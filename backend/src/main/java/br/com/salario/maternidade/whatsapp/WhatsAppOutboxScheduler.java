@@ -41,7 +41,7 @@ public class WhatsAppOutboxScheduler {
         }
     }
 
-    @Scheduled(fixedDelayString = "${WHATSAPP_OUTBOX_POLL_INTERVAL_MS:30000}")
+    @Scheduled(fixedDelayString = "${WHATSAPP_OUTBOX_POLL_INTERVAL_MS:1000}")
     public void poll() {
         // Never claim messages when the Cloud API sender is disabled.
         if (!enabled || !sendingEnabled) return;

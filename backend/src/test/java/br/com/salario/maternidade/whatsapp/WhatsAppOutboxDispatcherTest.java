@@ -7,6 +7,39 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class WhatsAppOutboxDispatcherTest {
+    @Test
+    void showsTypingBeforeSendingEligibleReply() {
+        when(store.claimOne()).thenReturn(Optional.of(
+            new WhatsAppOutboxDispatchStore.PendingReply(id, "5511999999999", "Olá", "wamid.inbound")));
+        when(store.stillEligible(id)).thenReturn(true);
+        assertTrue(dispatcher.dispatchOne());
+        var order = inOrder(client, store);
+        order.verify(client).sendTypingIndicator("5511999999999", "wamid.inbound");
+        order.verify(client).sendText("5511999999999", "Olá");
+        order.verify(store).markSent(id);
+    }
+
+    @Test
+    void indicatorFailureDoesNotPreventReplyOrRequireReview() {
+        when(store.claimOne()).thenReturn(Optional.of(
+            new WhatsAppOutboxDispatchStore.PendingReply(id, "5511999999999", "Olá", "wamid.inbound")));
+        when(store.stillEligible(id)).thenReturn(true);
+        doThrow(new IllegalStateException("indicator unavailable")).when(client)
+            .sendTypingIndicator("5511999999999", "wamid.inbound");
+        assertTrue(dispatcher.dispatchOne());
+        verify(client).sendText("5511999999999", "Olá");
+        verify(store).markSent(id);
+        verify(store, never()).markForReview(id);
+    }
+
+    @Test
+    void revokedConsentDoesNotShowTyping() {
+        when(store.claimOne()).thenReturn(Optional.of(
+            new WhatsAppOutboxDispatchStore.PendingReply(id, "5511999999999", "Olá", "wamid.inbound")));
+        when(store.stillEligible(id)).thenReturn(false);
+        assertTrue(dispatcher.dispatchOne());
+        verifyNoInteractions(client);
+    }
     private final WhatsAppOutboxDispatchStore store = mock(WhatsAppOutboxDispatchStore.class);
     private final WhatsAppCloudApiClient client = mock(WhatsAppCloudApiClient.class);
     private final WhatsAppOutboxDispatcher dispatcher = new WhatsAppOutboxDispatcher(store, client);

@@ -42,6 +42,15 @@ public class WhatsAppOutboxDispatcher {
             return true;
         }
 
+        // The indicator is cosmetic: a failure must never suppress the actual reply.
+        if (reply.inboundMessageId() != null && !reply.inboundMessageId().isBlank()) {
+            try {
+                client.sendTypingIndicator(reply.phone(), reply.inboundMessageId());
+            } catch (RuntimeException ex) {
+                logFailure("typing_indicator", reply.id(), ex);
+            }
+        }
+
         try {
             client.sendText(reply.phone(), reply.body());
         } catch (RuntimeException ex) {

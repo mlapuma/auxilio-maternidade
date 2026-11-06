@@ -10,6 +10,41 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class WhatsAppCloudApiClientTest {
     @Test
+    void sendsOfficialTypingIndicatorForInboundMessage() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://graph.facebook.com/v23.0/123456/messages"))
+            .andExpect(method(org.springframework.http.HttpMethod.POST))
+            .andExpect(header("Authorization", "Bearer test-token"))
+            .andExpect(jsonPath("$.messaging_product").value("whatsapp"))
+            .andExpect(jsonPath("$.status").value("read"))
+            .andExpect(jsonPath("$.message_id").value("wamid.inbound"))
+            .andExpect(jsonPath("$.typing_indicator.type").value("text"))
+            .andExpect(jsonPath("$.text").doesNotExist())
+            .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        var client = new WhatsAppCloudApiClient(builder, "test-token", "123456", "v23.0", true);
+        client.sendTypingIndicator("5511999999999", "wamid.inbound");
+        server.verify();
+    }
+
+    @Test
+    void typingIndicatorRespectsDisabledSendingAndRecipientRestriction() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        var disabled = new WhatsAppCloudApiClient(builder, "test-token", "123456", "v23.0", false);
+        assertThrows(IllegalStateException.class, () -> disabled.sendTypingIndicator("5511999999999", "wamid.1"));
+        var restricted = new WhatsAppCloudApiClient(builder, "test-token", "123456", "v23.0", true);
+        org.springframework.test.util.ReflectionTestUtils.setField(restricted, "targetPhone", "5511888888888");
+        assertThrows(IllegalStateException.class, () -> restricted.sendTypingIndicator("5511999999999", "wamid.1"));
+        server.verify();
+    }
+
+    @Test
+    void typingIndicatorRejectsMissingInboundMessage() {
+        var client = new WhatsAppCloudApiClient(RestClient.builder(), "test-token", "123456", "v23.0", true);
+        assertThrows(IllegalArgumentException.class, () -> client.sendTypingIndicator("5511999999999", ""));
+    }
+    @Test
     void reportsRootCauseTypeWithoutLeakingExceptionMessage() {
         var root = new javax.net.ssl.SSLHandshakeException("sensitive endpoint details");
         var wrapped = new org.springframework.web.client.ResourceAccessException("request failed", root);
